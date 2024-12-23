@@ -54,3 +54,13 @@ Route::get('producteur/reserverMp', [ProducteurController::class, 'reserverMp'])
 
 
 require __DIR__.'/auth.php';
+
+Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+
+Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+
+Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+
+Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+
+Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');

@@ -15,7 +15,7 @@ RESOURCES_PATH="${BASE_PATH}/resources"
 folder="${RESOURCES_PATH}/views/pages/${1}"
 folder_name="${1}"
 option_name="${2}"
-name="${folder_name}-${option_name}"
+name="${folder_name}_${option_name}"
 
 # Création des dossiers s'ils n'existent pas
 mkdir -p "${folder}"
@@ -29,6 +29,7 @@ else
     echo "✗ Erreur lors de la création du fichier blade"
     exit 1
 fi
+
 
 echo "Création du fichier CSS associé"
 if touch "${RESOURCES_PATH}/css/${folder_name}/${name}.css"; then
@@ -48,9 +49,13 @@ fi
 
 # Création des variables pour @include et @vite
 vite="@vite(['resources/css/${folder_name}/${name}.css','resources/js/${folder_name}/${name}.js'])"
+inc="@include('pages/${folder_name}/${folder_name}_default')"
 
 echo "liaison du fichier blade et css,js"
 echo "${vite}" > "${folder}/${name}.blade.php"
+
+echo "ajout de l'inclusion de la bande par defaut"
+echo "${inc}" >> "${folder}/${name}.blade.php"
 
 echo "Création du controller s'il n'existe pas"
 CONTROLLER_PATH="${BASE_PATH}/app/Http/Controllers/${folder_name^}Controller.php"
