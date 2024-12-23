@@ -1,0 +1,6 @@
+.main-content{
+    position: absolute;
+    left: 1000px;
+    top: 50px;
+    max-height: 40rem;
+}
