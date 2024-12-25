@@ -19,7 +19,7 @@
             <ul class="menu-items">
                 <li class="menu-item">
                     <i class="mdi mdi-clipboard-text"></i>
-                    <a href="{{ route('producteur-produit')}}">Produits du jour</a>
+                    <a href="{{ route('producteur_produit')}}">Produits du jour</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-file-document"></i>
@@ -82,8 +82,8 @@
                     <i class="mdi mdi-account-circle"></i>
                 </div>
                 <div class="user-details">
-                    <div class="name">Template nom</div>
-                    <div class="role">Template role</div>
+                    <div class="name">{{ $nom }}</div>
+                    <div class="role">{{ $secteur }}</div>
                 </div>
             </div>
         </div>

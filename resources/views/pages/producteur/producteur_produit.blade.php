@@ -12,10 +12,14 @@
     <div id="formulaire">
         <form method="POST" action="{{ route('enr_produits') }}">
             @csrf
-            <label for="qte">Producteur</label>
-            <input type="text" id="producteur" name="producteur" required> 
             <label for="produit">Produit</label>
-            <input type="text" id="produit" name="nom" required>
+            <select id="produit" name="name">
+                <option value="">Sélectionnez un produit</option>
+                @foreach ($all_produits as $item)
+                <option value="{{ $item->nom }}">{{ $item->nom }}</option>
+                @endforeach
+                <option value="ok">ok</option>   
+            </select>
             <label for="qte">Quantité</label>
             <input type="number" id="qte" name="qte" required>
 
@@ -25,6 +29,31 @@
             <input type="submit" id="submit" name="submit" value="Envoyer">
         </form>
     </div>
+    <div id="Production Journaliere recommander">
+  <h2>Production Journaliere recommander(une fois que la tables des produits restants de la journee passer sera creer, soustraire ceux la pour obtenir le vrai result)</h2>
+  <h2>Jour {{ $day }}</h2>
+    <table id="table_produit_suggerer" border="1" cellpadding = "5" cellspacing="0">
+        <tr>
+            <th>produit</th>
+            <th>prix</th>
+            <th>quantite</th>
+        </tr>
+        @foreach($productions_recommandees as $item)
+        <tr>
+            <td>
+                {{ $item['nom'] }}
+            </td>
+            <td>
+                {{ $item['prix'] }}
+            </td>
+            <td>
+                {{ $item['quantite_recommandee'] }}
+            </td>
+        </tr>
+</table>
+    @endforeach
+  </div>
+    <h2>Production Journaliere</h2>
     <div id="afficheur_produit">
         <table id="table_produit" border="1" cellpadding = "5" cellspacing="0">
             <tr>
@@ -32,27 +61,61 @@
                 <th>prix</th>
                 <th>quantite</th>
             </tr>
-            @foreach ($produits as $item)
+            @foreach ($p as $item)
                 <tr>
                     <td>
-                        {{ $item->nom }}
+                        {{ $item['nom'] }}
                     </td>
                     <td>
-                        {{ $item->prix }}
+                        {{ $item['prix'] }}
                     </td>
                     <td>
-                        {{ $item->quantite }}
+                        {{ $item['quantite'] }}
                     </td>
                 </tr>
         @endforeach
     </table>
     <br>
   </div>
+  
+  <div id="afficheur_production_attendu">
+  <h3>Taches de Production du Jour </h3>
+    <table id="table_pa" border="1" cellpadding = "5" cellspacing="0">
+            <tr>
+                <th>produit</th>
+                <th>prix</th>
+                <th>quantite attendu(Chef Production)</th>
+                <th>quantite deja produite</th>
+                <th>progression</th>
+                <th>status</th>
+            </tr>
+    @foreach($productions_attendues as $item)
+        <tr>
+            <td>
+                {{ $item['nom'] }}
+            </td>
+            <td>
+                {{ $item['prix'] }}
+            </td>
+            <td>
+                {{ $item['quantite_attendue'] }}
+            </td>
+            <td>
+                {{ $item['quantite_produite']}}
+            </td>
+            <td>
+                {{ $item['progression']}}%
+            </td>
+            <td>
+                 {{ $item['status'] }}
+            </td>
+        </tr>
+    @endforeach
+  </div>
   <div id="datetime">
     date : {{ $heure_actuelle->format('d:m:Y') }} <br>
     hour : {{ $heure_actuelle->format('H:i:s') }}
   </div>
-
 </div>
 <script>
     function afficherFormulaire() {

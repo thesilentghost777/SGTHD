@@ -1,23 +1,18 @@
 <?php
 
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Matiere extends Model
+class Production extends Model
 {
     protected $fillable = [
         'producteur',
         'produit',
-        'nom',
-        'prix',
         'quantite',
         'created_at',
         'updated_at'
     ];
-    protected $table = 'Matiere';
+    protected $table = 'Production';
     use HasFactory;
-    
-    // ... rest of your model code
 }

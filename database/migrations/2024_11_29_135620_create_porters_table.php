@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('facture');
             $table->tinyInteger('quantite');
             $table->primary(['produit', 'facture']);
-            $table->foreign('produit')->references('code_produit')->on('Produit');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
             $table->foreign('facture')->references('code_fac')->on('Facture');
             $table->timestamps();
         });

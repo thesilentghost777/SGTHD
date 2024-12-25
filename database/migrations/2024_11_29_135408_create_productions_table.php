@@ -11,14 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('Produit', function (Blueprint $table) {
-            $table->unsignedBigInteger('code_produit')->autoIncrement();
+        Schema::create('Production', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('produit');
             $table->unsignedBigInteger('producteur');
-            $table->string('nom', 50);
-            $table->unsignedBigInteger('prix');
             $table->smallInteger('quantite');
-            $table->foreign('producteur')->references('id')->on('users')->onDelete('cascade');;
             $table->timestamps();
+        
+            $table->foreign('producteur')
+                  ->references('id')
+                  ->on('users')
+                  ->onDelete('cascade');
+                  
+            $table->foreign('produit')
+                  ->references('code_produit')
+                  ->on('Produit_fixes')
+                  ->onDelete('cascade');
         });
     }
 

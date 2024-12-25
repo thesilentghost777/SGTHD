@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('produit')->nullable();
             $table->unsignedBigInteger('chef_production');
             $table->dateTime('date');
-            $table->foreign('produit')->references('code_produit')->on('Produit');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
             $table->foreign('chef_production')->references('id')->on('users');
             $table->timestamps();
         });

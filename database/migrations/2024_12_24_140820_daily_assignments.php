@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('Produit_recu', function (Blueprint $table) {
-            $table->unsignedBigInteger('code_produit')->autoIncrement();
-            $table->unsignedBigInteger('pointeur');
+        Schema::create('Daily_assignments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('chef_production');
+            $table->unsignedBigInteger('producteur');
             $table->unsignedBigInteger('produit');
-            $table->string('nom', 50);
-            $table->smallInteger('prix');
-            $table->smallInteger('quantite');
-            $table->foreign('pointeur')->references('id')->on('users');
+            $table->integer('expected_quantity');
             $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+            $table->foreign('chef_production')->references('id')->on('users');
+            $table->foreign('producteur')->references('id')->on('users');
+            $table->date('assignment_date');
+            $table->int('status');
             $table->timestamps();
         });
     }
@@ -29,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('Produit_recu');
+        //
     }
 };

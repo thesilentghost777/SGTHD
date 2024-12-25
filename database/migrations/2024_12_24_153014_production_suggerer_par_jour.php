@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('Commande', function (Blueprint $table) {
-            $table->bigInteger('id')->autoIncrement();
-            $table->string('libelle', 50);
-            $table->dateTime('date_commande');
-            $table->unsignedBigInteger('produit')->nullable();
+        Schema::create('Production_suggerer_par_jour', function (Blueprint $table) {
+            $table->id('id');
+            $table->unsignedBigInteger('produit');
+            $table->integer('quantity');
             $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+            $table->string('day');
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('Commande');
+        //
     }
 };

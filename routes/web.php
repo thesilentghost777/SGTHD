@@ -28,7 +28,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::get('/producteur/produit', [ProducteurController::class,'producteur'])->name('producteur-produit');
+Route::get('/producteur/produit', [ProducteurController::class,'produit'])->name('producteur_produit');
+Route::get('/producteur/pdefault', [ProducteurController::class,'pdefault'])->name('producteur_default');
+
 Route::post('/producteur/store', [ProducteurController::class,'store'])->name('enr_produits');
 
 Route::get('/dg/dashboard', [DgController::class,'dashboard'])->name('dg-dashboard');
@@ -57,10 +59,10 @@ require __DIR__.'/auth.php';
 
 Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
 
-Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+Route::get('chef_production/depense', [Chef_productionController::class, 'depense'])->name('chef_production-depense');
 
-Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+Route::get('pdg/depense', [PdgController::class, 'depense'])->name('pdg-depense');
 
-Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+Route::get('dg/rapports', [DgController::class, 'rapports'])->name('dg-rapports');
 
-Route::get('chef_production/gestion_employe', [Chef_productionController::class, 'gestion_employe'])->name('chef_production-gestion_employe');
+Route::get('serveur/versement', [ServeurController::class, 'versement'])->name('serveur-versement');

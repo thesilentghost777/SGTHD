@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('produit');
             $table->unsignedBigInteger('matierep');
             $table->primary(['produit', 'matierep']);
-            $table->foreign('produit')->references('code_produit')->on('Produit');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
             $table->foreign('matierep')->references('code_mp')->on('Matiere');
             $table->timestamps();
         });

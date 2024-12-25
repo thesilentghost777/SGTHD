@@ -41,6 +41,12 @@ label {
     margin-bottom: 5px;
 }
 
+select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
 input[type="text"],
 input[type="number"] {
     padding: 8px;
