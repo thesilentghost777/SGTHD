@@ -162,10 +162,102 @@ $day = $jour_actuel;
             ->with('success', 'Production enregistrée avec succès');
     }
 
+
+    public function fiche_production() {
+        $employe = auth()->user();
+    
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+    
+        // Obtenir le premier et dernier jour du mois courant
+        $debut_mois = now()->startOfMonth();
+        $fin_mois = now()->endOfMonth();
+    
+        // Récupérer toutes les productions du mois pour tous les produits
+        $productions_mois = Production::where('producteur', $employe->id)
+            ->whereBetween('created_at', [$debut_mois, $fin_mois])
+            ->get()
+            ->groupBy('produit');
+    
+        // Collection pour stocker les statistiques de production
+        $statistiques_production = collect();
+    
+        foreach ($productions_mois as $code_produit => $productions) {
+            // Obtenir les informations du produit
+            $produit = Produit_fixes::where('code_produit', $code_produit)->first();
+            
+            if ($produit) {
+                // Calculer les statistiques pour ce produit
+                $quantite_totale = $productions->sum('quantite');
+                $valeur_totale = $quantite_totale * $produit->prix;
+                
+                // Grouper par jour pour voir l'évolution
+                $productions_par_jour = $productions
+                    ->groupBy(function($production) {
+                        return $production->created_at->format('Y-m-d');
+                    })
+                    ->map(function($groupe) {
+                        return $groupe->sum('quantite');
+                    });
+    
+                // Calculer la moyenne journalière
+                $moyenne_journaliere = $quantite_totale / $productions_par_jour->count();
+    
+                // Trouver le jour avec la production maximale
+                $jour_max_production = $productions_par_jour->max();
+                $date_max_production = $productions_par_jour
+                    ->filter(function($quantite) use ($jour_max_production) {
+                        return $quantite == $jour_max_production;
+                    })
+                    ->keys()
+                    ->first();
+    
+                $statistiques_production->push([
+                    'nom_produit' => $produit->nom,
+                    'code_produit' => $code_produit,
+                    'quantite_totale' => $quantite_totale,
+                    'valeur_totale' => $valeur_totale,
+                    'moyenne_journaliere' => round($moyenne_journaliere, 2),
+                    'production_max' => [
+                        'quantite' => $jour_max_production,
+                        'date' => $date_max_production
+                    ],
+                    'productions_journalieres' => $productions_par_jour->toArray(),
+                    'prix_unitaire' => $produit->prix
+                ]);
+            }
+        }
+    
+        // Récupérer les informations de l'employé
+        $info = User::where('id', $employe->id)->first();
+        
+        // Retour correct pour la vue avec un tableau de données
+        return view('pages.producteur.producteur_fiche_production', [
+            'statistiques' => $statistiques_production->toArray(),
+            'mois_actuel' => now()->format('F Y'),
+            'debut_mois' => $debut_mois->format('Y-m-d'),
+            'fin_mois' => $fin_mois->format('Y-m-d'),
+            'nom' => $info->name,
+            'secteur' => $info->secteur,
+            'num_tel' => $info->num_tel,
+        ]);
+    }
+    
+
+    public function commande() {
+        if (!auth()->user()) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        return view('pages/producteur/producteur-reserverMp');
+    }
+
     public function reserverMp() {
         if (!auth()->user()) {
             return redirect()->route('login')->with('error', 'Veuillez vous connecter');
         }
         return view('pages/producteur/producteur-reserverMp');
     }
+
+   
 }

@@ -23,7 +23,7 @@
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-file-document"></i>
-                    Fiche de production
+                    <a href="{{ route('producteur-fiche_production')}}">Fiche de production</a> 
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-cart"></i>

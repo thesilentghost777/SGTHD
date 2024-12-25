@@ -1,7 +1,7 @@
 <?php
 
 namespace Database\Factories;
-
+use App\Models\Produit_fixes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +17,15 @@ class CommandeFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'libelle' => $this->faker->text(50), 
+            'date_commande' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'produit' => Produit_fixes::inRandomOrder()->first()->code_produit, 
+            'created_at' => now(),
+            'updated_at' => now(),
+            'categorie' => fake()->unique()->randomElement([
+                'patisserie',
+                'boulangerie',
+            ]),
         ];
     }
 }

@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/producteur/produit', [ProducteurController::class,'produit'])->name('producteur_produit');
+
 Route::get('/producteur/pdefault', [ProducteurController::class,'pdefault'])->name('producteur_default');
 
 Route::post('/producteur/store', [ProducteurController::class,'store'])->name('enr_produits');
@@ -66,3 +67,7 @@ Route::get('pdg/depense', [PdgController::class, 'depense'])->name('pdg-depense'
 Route::get('dg/rapports', [DgController::class, 'rapports'])->name('dg-rapports');
 
 Route::get('serveur/versement', [ServeurController::class, 'versement'])->name('serveur-versement');
+
+Route::get('producteur/fiche_production', [ProducteurController::class, 'fiche_production'])->name('producteur-fiche_production');
+
+Route::get('producteur/commande', [ProducteurController::class, 'commande'])->name('producteur-commande');

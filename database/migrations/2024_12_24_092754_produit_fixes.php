@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id('code_produit');  // Utilise id() qui crée un unsignedBigInteger AUTO_INCREMENT
             $table->string('nom', 50);
             $table->smallInteger('prix');
+            $table->string('categorie');
             $table->timestamps();
         });
     }

@@ -35,6 +35,10 @@ class Produit_fixesFactory extends Factory
                 'pouding',
             ]),
             'prix' => fake()->numberBetween(100, 5000), // Prix entre 100 et 5000
+            'categorie' => fake()->unique()->randomElement([
+                'patisserie',
+                'boulangerie',
+            ]),
             'created_at' => fake()->unique()->dateTime(), // Date
             'updated_at' => fake()->unique()->dateTime(), //
         ];
