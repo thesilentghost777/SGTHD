@@ -18,7 +18,6 @@
                 @foreach ($all_produits as $item)
                 <option value="{{ $item->nom }}">{{ $item->nom }}</option>
                 @endforeach
-                <option value="ok">ok</option>   
             </select>
             <label for="qte">Quantité</label>
             <input type="number" id="qte" name="qte" required>

@@ -21,7 +21,7 @@ return new class extends Migration
             $table->foreign('chef_production')->references('id')->on('users');
             $table->foreign('producteur')->references('id')->on('users');
             $table->date('assignment_date');
-            $table->int('status');
+            $table->Integer('status');
             $table->timestamps();
         });
     }

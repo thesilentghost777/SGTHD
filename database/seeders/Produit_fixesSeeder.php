@@ -14,6 +14,6 @@ class Produit_fixesSeeder extends Seeder
      */
     public function run(): void
     {
-        Produit_fixes::factory(13)->create();
+        Produit_fixes::factory(100)->create();
     }
 }

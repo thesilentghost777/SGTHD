@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('libelle', 50);
             $table->dateTime('date_commande');
             $table->unsignedBigInteger('produit')->nullable();
+            $table->integer('quantite');
             $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
             $table->string('categorie');
             $table->timestamps();

@@ -4,6 +4,7 @@ use App\Models\Production;
 use App\Models\Daily_assignments;
 use App\Models\Produit_fixes;
 use App\Models\User;
+use App\Models\Commande;
 use App\Models\Production_suggerer_par_jour;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;  // Ajout de l'import
@@ -57,8 +58,16 @@ public function produit() {
     }
 
     // Récupérer les informations complémentaires
-    $heure_actuelle = now();
-    $all_produits = Produit_fixes::all();
+   // Version améliorée
+    $role = '';
+    if ($employe->role === 'patissier') {
+        $role = 'patisserie';
+    } else if ($employe->role === 'boulanger') { 
+        $role = 'boulangerie';
+    }
+
+$heure_actuelle = now();
+    $all_produits = Produit_fixes::where('categorie', $role)->get();
     $info = User::where('id', $employe->id)->first();
     $nom = $info->name;
     $secteur = $info->secteur;
@@ -246,17 +255,40 @@ $day = $jour_actuel;
     
 
     public function commande() {
-        if (!auth()->user()) {
-            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
-        }
-        return view('pages/producteur/producteur-reserverMp');
+    // Vérification de l'authentification
+    $employe = auth()->user();
+    if (!$employe) {
+        return redirect()->route('login')->with('error', 'Veuillez vous connecter');
     }
 
+    // Définition du rôle avec tableau associatif (plus propre)
+    $roles = [
+        'patissier' => 'patisserie',
+        'boulanger' => 'boulangerie'
+    ];
+    $role = $roles[$employe->role] ?? '';
+
+    // Récupération des infos utilisateur
+    $info = User::where('id', $employe->id)->first();
+    $nom = $info->name;
+    $secteur = $info->secteur;
+
+    // Récupération des commandes
+    $commandes = Commande::where('categorie', $role)->get();    
+    return view('pages/producteur/producteur_commande', compact('nom', 'secteur', 'commandes'));
+}
+
+
     public function reserverMp() {
-        if (!auth()->user()) {
+        $employe = auth()->user();
+        if (!$employe) {
             return redirect()->route('login')->with('error', 'Veuillez vous connecter');
         }
-        return view('pages/producteur/producteur-reserverMp');
+        $info = User::where('id', $employe->id)->first();
+        $nom = $info->name;
+        $secteur = $info->secteur;
+        return view('pages/producteur/producteur_reserverMp',compact('nom','secteur'));
+
     }
 
    

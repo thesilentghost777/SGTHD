@@ -12,6 +12,6 @@ class Production_suggerer_par_jourSeeder extends Seeder
      */
     public function run(): void
     {
-        Production_suggerer_par_jour::factory(20)->create();
+        Production_suggerer_par_jour::factory(100)->create();
     }
 }

@@ -20,9 +20,10 @@ class CommandeFactory extends Factory
             'libelle' => $this->faker->text(50), 
             'date_commande' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'produit' => Produit_fixes::inRandomOrder()->first()->code_produit, 
+            'quantite' => fake()->numberBetween(100, 5000),
             'created_at' => now(),
             'updated_at' => now(),
-            'categorie' => fake()->unique()->randomElement([
+            'categorie' => fake()->randomElement([
                 'patisserie',
                 'boulangerie',
             ]),

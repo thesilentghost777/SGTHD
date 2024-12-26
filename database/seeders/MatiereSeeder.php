@@ -11,6 +11,6 @@ class MatiereSeeder extends Seeder
      */
     public function run(): void
     {
-        Matiere::factory(13)->create();
+        Matiere::factory(100)->create();
     }
 }

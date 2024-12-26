@@ -11,6 +11,6 @@ class Daily_assignmentsSeeder extends Seeder
 {
     public function run()
     {
-        Daily_assignments::factory()->count(50)->create();
+        Daily_assignments::factory()->count(100)->create();
     }
 }

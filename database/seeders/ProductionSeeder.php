@@ -11,6 +11,6 @@ class ProductionSeeder extends Seeder
      */
     public function run(): void
     {
-        Production::factory(13)->create();
+        Production::factory(100)->create();
     }
 }

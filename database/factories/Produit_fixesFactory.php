@@ -18,7 +18,7 @@ class Produit_fixesFactory extends Factory
     {
         return [
             'code_produit' => fake()->unique()->numberBetween(1,500),
-            'nom' => fake()->unique()->randomElement([
+            'nom' => fake()->randomElement([
                 'beignets',
                 'beignets au lait',
                 'beignets soufler',
@@ -35,12 +35,12 @@ class Produit_fixesFactory extends Factory
                 'pouding',
             ]),
             'prix' => fake()->numberBetween(100, 5000), // Prix entre 100 et 5000
-            'categorie' => fake()->unique()->randomElement([
+            'categorie' => fake()->randomElement([
                 'patisserie',
                 'boulangerie',
             ]),
-            'created_at' => fake()->unique()->dateTime(), // Date
-            'updated_at' => fake()->unique()->dateTime(), //
+            'created_at' => fake()->dateTime(), // Date
+            'updated_at' => fake()->dateTime(), //
         ];
     }
 }

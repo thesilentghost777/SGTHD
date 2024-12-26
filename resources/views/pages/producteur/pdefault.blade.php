@@ -27,11 +27,12 @@
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-cart"></i>
-                    Commandes
+                    <a href="{{ route('producteur-commande')}}">Commandes</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-archive"></i>
-                    Réservation MP
+                    <a href="{{ route('producteur-reserverMp')}}">Réservation MP</a>
+                    
                 </li>
             </ul>
         </div>

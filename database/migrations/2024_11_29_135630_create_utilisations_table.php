@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('Utilisation', function (Blueprint $table) {
             $table->unsignedBigInteger('produit');
             $table->unsignedBigInteger('matierep');
+            $table->unsignedBigInteger('producteur');
             $table->primary(['produit', 'matierep']);
             $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+            $table->foreign('producteur')->references('id')->on('users');
             $table->foreign('matierep')->references('code_mp')->on('Matiere');
             $table->timestamps();
         });
