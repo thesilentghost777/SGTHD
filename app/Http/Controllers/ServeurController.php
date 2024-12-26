@@ -4,17 +4,17 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\ProduitRecu;
-use App\Models\Produit;
+use App\Models\Produit_fixes;
 use App\Models\User;
 use Carbon\Carbon;
 class ServeurController extends Controller
 {
     public function dashboard() {
-        //  $employe = auth()->user();
+         $employe = auth()->user();
 
-        //  if (!$employe) {
-        //    return redirect()->route('login')->with('error', 'Veuillez vous connecter');
-        //  }
+         if (!$employe) {
+           return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+         }
         $produits = ProduitRecu::latest()->get();
         $heure_actuelle = now();
         $heure_actuelle->setTimezone('UTC');
@@ -36,7 +36,7 @@ class ServeurController extends Controller
    }
     public function ajouterProduit_recu(){
         $Employe=User::where('role','pointeur')->get();
-        $produitR=Produit::all();
+        $produitR=Produit_fixes::all();
         $heure_actuelle = now();
         $heure_actuelle->setTimezone('UTC');
       return view('pages\serveur\ serveur-ajouterProduit_recu',compact('Employe','produitR','heure_actuelle'));
