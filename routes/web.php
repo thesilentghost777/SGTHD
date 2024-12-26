@@ -71,3 +71,5 @@ Route::get('serveur/versement', [ServeurController::class, 'versement'])->name('
 Route::get('producteur/fiche_production', [ProducteurController::class, 'fiche_production'])->name('producteur-fiche_production');
 
 Route::get('producteur/commande', [ProducteurController::class, 'commande'])->name('producteur-commande');
+Route::get('serveur/ajouterProduit_recu', [ServeurController::class, 'ajouterProduit_recu'])->name('serveur-ajouterProduit_recu');
+Route::post('serveur/store', [ServeurController::class, 'store'])->name('addProduit_recu');
