@@ -18,9 +18,9 @@
         <div class="menu-section">
             <h3>Ventes</h3>
             <ul class="menu-items">
-                <li class="menu-item">
+            <li class="menu-item">
                     <i class="mdi mdi-basket"></i>
-                    Produits reçus
+                     <a href="{{route('serveur-dashboard')}} " class="mdi mdi-basket" style=color:white;> Produits reçus</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-cash-register"></i>
