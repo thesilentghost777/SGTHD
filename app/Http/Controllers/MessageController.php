@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Message;
 use Illuminate\Http\Request;
-
+use App\Models\Message;
 class MessageController extends Controller
 {
     public function message() {
@@ -14,12 +14,26 @@ class MessageController extends Controller
         }
         return view('pages.message');
     }
+<<<<<<< HEAD
     public function store_message() {
+=======
+    public function store_message(Request $request) {
+>>>>>>> 6636e43ed6c533fa2c38982f6598d0107b426a6d
         $employe = auth()->user();
         if (!$employe) {
             return redirect()->route('login')->with('error', 'Veuillez vous connecter');
         }
-        
+        $request->validate([
+         'category'=>'required',
+         'message'=>'required|string|max:1000',
+        ]);
+        Message::create([
+          'message'=>$request->message,
+          'type'=>$request->category,
+          'date_message'=>now(),
+          'name'=>$employe->name
+        ]);
+        return redirect()->route('dashboard')->with('Succes','Message envoye avec succes');
     }
 
 
