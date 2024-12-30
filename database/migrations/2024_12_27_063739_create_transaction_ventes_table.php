@@ -19,8 +19,9 @@ class CreateTransactionVentesTable extends Migration
             $table->tinyInteger('serveur');
             $table->Integer('quantite');
             $table->Integer('prix');
-            $table->Integer('total_ventes');
             $table->date('date_vente');
+            $table->string('type');
+            $table->string('monnaie');
             $table->timestamps();
             $table->foreign('produit')->references('code_produit')->on('produit_fixes')
             ->onDelete('cascade');
