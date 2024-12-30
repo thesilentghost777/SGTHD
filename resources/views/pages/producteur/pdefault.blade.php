@@ -31,7 +31,7 @@
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-archive"></i>
-                   >Réservation MP 
+                   Réservation MP 
                 </li>
             </ul>
         </div>
@@ -61,17 +61,27 @@
         <div class="menu-section">
             <h3>Communications</h3>
             <ul class="menu-items">
+            <li class="menu-item">
+                    <i class="mdi mdi-currency-eur"></i>
+                    Reclamer AS
+                </li>
                 <li class="menu-item">
                     <i class="mdi mdi-message-text"></i>
-                    Messages
+                    <a href="{{ route('message') }}">
+                    Messages privees
+                    </a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-lightbulb-on"></i>
+                    <a href="{{ route('message') }}">
                     Suggestions
+                    </a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-alert"></i>
+                    <a href="{{ route('message') }}">
                     Signalements
+                    </a>
                 </li>
             </ul>
         </div>

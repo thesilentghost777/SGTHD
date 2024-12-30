@@ -58,7 +58,6 @@
                         <div class="message-content">
                         <div class="message-header">
                              <strong>Anonyme</strong> <!-- Toujours afficher Anonyme -->
-                            <span class="message-time">{{ date('H:i', strtotime($message->date_message)) }}</span>
                         </div>
                             <div class="message-text">{{ $message->message }}</div>
                             <div class="message-date">{{ date('d/m/Y', strtotime($message->date_message)) }}</div>
@@ -96,7 +95,6 @@
                         <div class="message-content">
                             <div class="message-header">
                                 <strong>{{ $message->name !== 'null' ? $message->name : 'Anonyme' }}</strong>
-                                <span class="message-time">{{ date('H:i', strtotime($message->date_message)) }}</span>
                             </div>
                             <div class="message-text">{{ $message->message }}</div>
                             <div class="message-date">{{ date('d/m/Y', strtotime($message->date_message)) }}</div>
@@ -136,7 +134,6 @@
                         <div class="message-content">
                             <div class="message-header">
                                 <strong>{{ $message->name !== 'null' ? $message->name : 'Anonyme' }}</strong>
-                                <span class="message-time">{{ date('H:i', strtotime($message->date_message)) }}</span>
                             </div>
                             <div class="message-text">{{ $message->message }}</div>
                             <div class="message-date">{{ date('d/m/Y', strtotime($message->date_message)) }}</div>
