@@ -1,23 +1,26 @@
-@vite(['resources/css/message.css','resources/js/message.js'])
+
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Message Form</title>
-   
+   <link rel="stylesheet" href="{{asset('css/message.css')}}"> 
 </head>
 
 <body>
     <div class="container">
         <h1>Send a Message</h1>
-        <select id="messageCategory">
+        <form action="{{route('message-post')}}" method="POST">
+            @csrf
+
+        <select id="messageCategory" name="category" required>
             <option value="" disabled selected>Select a category</option>
             <option value="complaint-private">Complaint (Private)</option>
             <option value="suggestion">Suggestion</option>
             <option value="report">Report</option>
         </select>
-        <textarea id="messageContent" rows="5" placeholder="Write your message here..."></textarea>
+        <textarea id="messageContent" name="message" rows="5" placeholder="Write your message here..."></textarea>
         <button id="sendButton">Send</button>
         <div id="confirmation" class="cancel-button">
             <p>Are you sure you want to send this message? <span class="countdown" id="countdown"></span></p>
