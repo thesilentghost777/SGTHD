@@ -389,7 +389,7 @@ body {
                 </div>
                 <div class="user-details">
                     <div class="name">{{$nom}}</div>
-                    <div class="role">Serveuse</div>
+                    <div class="role">Serveur(se)</div>
                 </div>
             </div>
         </div>
