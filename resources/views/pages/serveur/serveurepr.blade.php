@@ -1,4 +1,5 @@
-@vite(['resources\css\ serveur/serveur-enrProduit_vendu.css','resources\js\ serveur\ serveur-enrProduit_vendu.js'])
+@vite(['resources/css/serveur/serveur-enrProduit_vendu.css','resources/js/serveur/serveur-enrProduit_vendu.js'])
+@include ('/pages/serveur/serveur_default')
 <!DOCTYPE html>
 <html lang="en">
 <head>

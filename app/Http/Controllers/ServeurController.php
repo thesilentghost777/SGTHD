@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\ProduitRecu;
+use App\Models\Produit_recu;
 use App\Models\Produit_fixes;
 use App\Models\Production;
 use App\Models\User;
@@ -18,7 +18,7 @@ class ServeurController extends Controller
          if (!$employe) {
            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
          }
-        $produits = ProduitRecu::latest()->get();
+        $produits = Produit_recu::latest()->get();
         $proV=Transaction_vente::latest()->get();
         $heure_actuelle = now();
         $heure_actuelle->setTimezone('UTC');
@@ -33,7 +33,7 @@ class ServeurController extends Controller
         'quantite'=>'required',
         
         ]);
-        $produits=ProduitRecu::create($validate);
+        $produits=Produit_recu::create($validate);
         
         return redirect()->route('serveur-dashboard')->with('Produit ajoute avec succes');
 
@@ -43,7 +43,7 @@ class ServeurController extends Controller
         $produitR=Produit_fixes::all();
         $heure_actuelle = now();
         $heure_actuelle->setTimezone('UTC');
-      return view('pages\serveur\ serveur-ajouterProduit_recu',compact('Employe','produitR','heure_actuelle'));
+      return view('pages/serveur/serveur-ajouterProduit_recu',compact('Employe','produitR','heure_actuelle'));
     }
     public function store_vendu(Request $request) {
          try { 
@@ -84,7 +84,7 @@ class ServeurController extends Controller
         $produitR=Produit_fixes::all();
         $heure_actuelle = now();
         $heure_actuelle->setTimezone('UTC');
-        return view('pages\serveur\ serveur-enrProduit_vendu',compact('produitR','heure_actuelle'));
+        return view('pages/serveur/serveurepr',compact('produitR','heure_actuelle'));
     }
 
 }

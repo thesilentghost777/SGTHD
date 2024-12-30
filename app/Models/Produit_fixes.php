@@ -7,7 +7,7 @@ use App\Models\Produits_fixes;
 class Produit_fixes extends Model
 {
     use HasFactory;
-    protected $table = 'produit_fixes';
+    protected $table = 'Produit_fixes';
     protected $primaryKey='code_produit';
     protected $fillable = [
         'nom',
