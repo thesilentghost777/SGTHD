@@ -13,18 +13,20 @@ use Carbon\Carbon;
 class ServeurController extends Controller
 {
     public function dashboard() {
-        //  $employe = auth()->user();
+          $employe = auth()->user();
 
-        //  if (!$employe) {
-        //    return redirect()->route('login')->with('error', 'Veuillez vous connecter');
-        //  }
+         if (!$employe) {
+           return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+         }
         $produits = ProduitRecu::latest()->get();
         $proV=Transaction_vente::latest()->get();
         $produitInv=Transaction_vente::latest()->get();
         $Versement=VersementCsg::latest()->get();
+        $user = User::where('id', $employe->id)->first();
         $heure_actuelle = now();
         $heure_actuelle->setTimezone('UTC');
-        return view('pages/serveur/serveur_dashboard',['produits' => $produits,'proV'=>$proV,'produitInv'=>$produitInv,'Versement'=>$Versement,'heure_actuelle' => $heure_actuelle]);
+        
+        return view('pages/serveur/serveur_dashboard',['produits' => $produits,'proV'=>$proV,'produitInv'=>$produitInv,'Versement'=>$Versement,'user'=>$user, 'nom'=>$user->name,'heure_actuelle' => $heure_actuelle]);
     }
    public function store(Request $request){
     $validate=  $request->validate([
