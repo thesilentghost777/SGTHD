@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Message;
 use Illuminate\Http\Request;
-use App\Models\Message;
 class MessageController extends Controller
 {
     public function message() {
@@ -14,11 +13,7 @@ class MessageController extends Controller
         }
         return view('pages.message');
     }
-<<<<<<< HEAD
-    public function store_message() {
-=======
     public function store_message(Request $request) {
->>>>>>> 6636e43ed6c533fa2c38982f6598d0107b426a6d
         $employe = auth()->user();
         if (!$employe) {
             return redirect()->route('login')->with('error', 'Veuillez vous connecter');
@@ -27,51 +22,38 @@ class MessageController extends Controller
          'category'=>'required',
          'message'=>'required|string|max:1000',
         ]);
-        Message::create([
-          'message'=>$request->message,
-          'type'=>$request->category,
-          'date_message'=>now(),
-          'name'=>$employe->name
-        ]);
-        return redirect()->route('dashboard')->with('Succes','Message envoye avec succes');
+        if($request->type != 'complaint-private'){
+            Message::create([
+                'message'=>$request->message,
+                'type'=>$request->category,
+                'date_message'=>now(),
+                'name'=>$employe->name
+              ]);
+        }else{
+            Message::create([
+                'message'=>$request->message,
+                'type'=>$request->category,
+                'date_message'=>now(),
+                'name'=>'null',
+              ]);
+        }
+        return view('pages.message');
+       
     }
 
 
     public function lecture_message()
-        {
-            $employe = auth()->user();
-        if (!$employe) {
-            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
-        }
-    $allMessages = Message::orderBy('date_message', 'desc')->get();
-    
-    // Créer des tableaux vides pour chaque type
-    $messages_complaint_private = [];
-    $messages_suggestion = [];
-    $messages_report = [];
-    $messages_error = [];
-
-    $messages_complaint_private[] = "RAS";
-    
-    // Parcourir les messages et les classer selon leur type
-    foreach($allMessages as $message) {
-        switch($message->type) {
-            case 'complaint_private':
-                $messages_complaint_private[] = $message;
-                break;
-            case 'suggestion':
-                $messages_suggestion[] = $message;
-                break;
-            case 'report':
-                $messages_report[] = $message;
-                break;
-            case 'error':
-                $messages_error[] = $message;
-                 break;
-        }
+{
+    $employe = auth()->user();
+    if (!$employe) {
+        return redirect()->route('login')->with('error', 'Veuillez vous connecter');
     }
     
-    // Retourner les tableaux avec compact()
+    $messages_complaint_private = Message::where('type', 'complaint-private')->get();
+    $messages_suggestion = Message::where('type', 'suggestion')->get();
+    $messages_report = Message::where('type', 'report')->get();
+    $messages_error = Message::where('type', 'error')->get();
+    
     return view('pages.lecture_message', compact(
         'messages_complaint_private',
         'messages_suggestion',
@@ -79,4 +61,29 @@ class MessageController extends Controller
         'messages_error'
     ));
 }
+public function destroy(Message $message)
+{
+    $message->delete();
+    return redirect()->back()->with('success', 'Message supprimé');
+}
+
+public function markRead($type)
+{
+    try {
+        // Mettre à jour tous les messages non lus du type spécifié
+        Message::where('type', $type)
+              ->where('read', false)
+              ->update(['read' => true]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Messages marqués comme lus'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la mise à jour des messages'
+        ], 500);
     }
+}
+}

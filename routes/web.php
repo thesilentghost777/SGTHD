@@ -82,3 +82,5 @@ Route::get('message', [MessageController::class, 'message'])->name('message');
 Route::post('message/store_message', [MessageController::class, 'store_message'])->name('message-post');
 
 Route::get('lecture_message', [MessageController::class, 'lecture_message'])->name('lecture_message');
+Route::post('/messages/mark-read/{type}', [MessageController::class, 'markRead'])->name('messages.markRead');
+Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('messages.destroy');

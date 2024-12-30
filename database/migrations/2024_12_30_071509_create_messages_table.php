@@ -13,11 +13,13 @@ class CreateMessagesTable extends Migration
      */
     public function up()
     {
-        Schema::create('messages', function (Blueprint $table) {
+        Schema::create('Message', function (Blueprint $table) {
+            $table->id();
             $table->string('message');
             $table->string('type');
             $table->date('date_message');
             $table->string('name');
+            $table->boolean('read')->default(false);
             $table->timestamps();
         });
     }
