@@ -76,3 +76,5 @@ Route::post('serveur/store_versement', [ServeurController::class, 'store_verseme
 Route::post('serveur/monnaie_recu', [ServeurController::class, 'monnaie_recu'])->name('serveur-monnaie_recu');
 
 Route::get('serveur/fiche_versement', [ServeurController::class, 'fiche_versement'])->name('serveur-fiche_versement');
+Route::get('message/message_categorie', [MessageController::class, 'message_categorie'])->name('message-categorie');
+Route::post('message/store_message', [MessageController::class, 'store_message'])->name('save_message');
