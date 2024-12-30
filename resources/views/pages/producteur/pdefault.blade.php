@@ -31,8 +31,7 @@
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-archive"></i>
-                    <a href="{{ route('producteur-reserverMp')}}">Réservation MP</a>
-                    
+                   >Réservation MP 
                 </li>
             </ul>
         </div>

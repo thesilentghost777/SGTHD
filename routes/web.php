@@ -80,3 +80,5 @@ Route::post('serveur/monnaie_recu', [ServeurController::class, 'monnaie_recu'])-
 Route::get('serveur/fiche_versement', [ServeurController::class, 'fiche_versement'])->name('serveur-fiche_versement');
 Route::get('message', [MessageController::class, 'message'])->name('message');
 Route::post('message/store_message', [MessageController::class, 'store_message'])->name('message-post');
+
+Route::get('lecture_message', [MessageController::class, 'lecture_message'])->name('lecture_message');

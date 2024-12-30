@@ -13,9 +13,9 @@
         <h1>Send a Message</h1>
         <select id="messageCategory">
             <option value="" disabled selected>Select a category</option>
-            <option value="complaint-private">Complaint (Private)</option>
+            <option value="complaint-private">Complaint (Private  privee))</option>
             <option value="suggestion">Suggestion</option>
-            <option value="report">Report</option>
+            <option value="report">Report (signalement)</option>
         </select>
         <textarea id="messageContent" rows="5" placeholder="Write your message here..."></textarea>
         <button id="sendButton">Send</button>
