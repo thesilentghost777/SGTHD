@@ -5,15 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liste des produits</title>
+    <style>
+        .main-content{
+    position: absolute;
+    top: 100px;
+    left: 500px;
+}
+    </style>
 </head>
 <body>
+
 <main class="main-content">
 
-
 <h1>Bienvenue </h1>
+<a href="{{route('serveur-ajouterProduit_recu')}}">Ajouter un produit</a>  <a href="{{route('serveur-enrProduit_vendu')}}">Enregistrer une vente</a> <br>
     <h2>Liste des produits</h2>
-     
-    <a href="{{route('serveur-ajouterProduit_recu')}}">Ajouter un produit</a> <br>
+    
    <br> <table border=1>
      <thead>
       <tr>
@@ -37,6 +44,30 @@
      </tr>
      @endforeach
      </tbody> 
+     <h2>Liste des produits Vendus</h2>
+    
+   <br> <table border=1>
+     <thead>
+      <tr>
+       <th>Code_produit</th>
+       <th>Quantite</th>
+       <th>Prix</th>
+       <th>Total de la vente</th>
+       <th>Date de la vente</th>
+      </tr>
+     </thead>
+     <tbody>
+     @foreach($proV as $produit)
+      <tr>
+      <td>{{$produit->produit}}</td>
+      <td>{{$produit->quantite}}</td> 
+      <td>{{$produit->prix}}</td> 
+      <td>{{$produit->total_ventes}}</td> 
+      <td>{{$produit->date_vente}}</td> 
+     </tr>
+     @endforeach
+     </tbody> 
 </main>
+
 </body>
 </html>
