@@ -18,9 +18,10 @@
 <main class="main-content">
 
 <h1>Bienvenue </h1>
-<a href="{{route('serveur-ajouterProduit_recu')}}">Ajouter un produit</a>  <a href="{{route('serveur-enrProduit_vendu')}}">Enregistrer une vente</a> <br>
-    <h2>Liste des produits</h2>
-    
+<a href="{{route('serveur-ajouterProduit_recu')}}">Ajouter un produit Recu</a>  <a href="{{route('serveur-enrProduit_vendu')}}">Enregistrer une vente</a> <br>
+<a href="{{route('serveur-versement')}}">Effectuer un versement</a> <a href="{{route('serveur-produit_invendu')}}">Enregistrer un produit invendu</a> <br>    
+<h2>Liste des produits</h2>
+
    <br> <table border=1>
      <thead>
       <tr>
@@ -46,7 +47,7 @@
      </tbody> 
      <h2>Liste des produits Vendus</h2>
     
-   <br> <table border=1>
+   <br><target name="frame"> <table border=1>
      <thead>
       <tr>
        <th>Code_produit</th>
@@ -54,6 +55,8 @@
        <th>Prix</th>
        <th>Total de la vente</th>
        <th>Date de la vente</th>
+       <th>Type de L'operation</th>
+       <th>Monnaie Recu</th>
       </tr>
      </thead>
      <tbody>
@@ -64,6 +67,8 @@
       <td>{{$produit->prix}}</td> 
       <td>{{$produit->total_ventes}}</td> 
       <td>{{$produit->date_vente}}</td> 
+      <td>{{$produit->type}}</td>
+      <td>{{$produit->monnaie}}</td>
      </tr>
      @endforeach
      </tbody> 
