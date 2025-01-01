@@ -12,6 +12,7 @@ use App\Http\Controllers\AlimentationController;
 use App\Http\Controllers\GlaceController;
 use App\Http\Controllers\PointeurController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\SalaireController;
 
 
 
@@ -84,3 +85,23 @@ Route::post('message/store_message', [MessageController::class, 'store_message']
 Route::get('lecture_message', [MessageController::class, 'lecture_message'])->name('lecture_message');
 Route::post('/messages/mark-read/{type}', [MessageController::class, 'markRead'])->name('messages.markRead');
 Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('messages.destroy');
+
+
+Route::middleware(['auth'])->group(function () {
+    // Routes pour les employés
+    Route::get('/reclamer-as', [SalaireController::class, 'reclamerAs'])->name('reclamer-as');
+    Route::post('/store-demandes-as', [SalaireController::class, 'store_demandes_AS'])->name('store-demandes-as');
+    Route::get('/voir-status', [SalaireController::class, 'voir_Status'])->name('voir-status');
+    Route::get('/validation-retrait', [SalaireController::class, 'validation_retrait'])->name('validation-retrait');
+    Route::post('/recup-retrait', [SalaireController::class, 'recup_retrait'])->name('recup-retrait');
+
+    // Routes pour le DG
+        Route::get('/valider-as', [SalaireController::class, 'validerAs'])->name('valider-as');
+        Route::post('/store-validation', [SalaireController::class, 'store_validation'])->name('store-validation');
+        Route::get('/form-salaire', [SalaireController::class, 'form_salaire'])->name('form-salaire');
+        Route::post('/store-salaire', [SalaireController::class, 'store_salaire'])->name('store-salaire');
+
+    // Routes pour le CP
+        Route::get('/valider-retraitcp', [SalaireController::class, 'valider_retraitcp'])->name('valider-retraitcp');
+        Route::post('/recup-retrait-cp', [SalaireController::class, 'recup_retrait_cp'])->name('recup-retrait-cp');
+});
