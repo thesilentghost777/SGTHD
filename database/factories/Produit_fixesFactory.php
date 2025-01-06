@@ -17,7 +17,7 @@ class Produit_fixesFactory extends Factory
     public function definition(): array
     {
         return [
-            'code_produit' => fake()->unique()->numberBetween(1,500),
+            'code_produit' => fake()->unique()->numberBetween(1,5000),
             'nom' => fake()->randomElement([
                 'beignets',
                 'beignets au lait',

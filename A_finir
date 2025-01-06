@@ -1,0 +1,10 @@
+les reservations peuvent servir de table pour avoir des matieres premiere'
+donc changer la vue qui retourne les matiere  assigner pourprendre en compte les reservations
+et lorsqu'un producteur veux produire ,  prendre en compte xa
+aussu revoir le calculs des benefices et marge :: ce sontr des benefices estimer pas net (il faut y retrancher une certaines quantite)
+
+gerer les vues au niveau de quantie de matiere (ce n'est pas la quantite en kg mais la quantite en unite (ex :: 50 sacs))
+
+creer une vue de restitution de matiere premiere permettant au producteur et cp de pouvoir recuperer les matiere restantes
+
+

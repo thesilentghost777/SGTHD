@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('Horaire', function (Blueprint $table) {
             $table->bigInteger('id')->autoIncrement();
             $table->unsignedBigInteger('employe')->nullable();
-            $table->dateTime('arrive');
-            $table->dateTime('depart');
-            $table->foreign('employe')->references('id')->on('users');
+            $table->dateTime('arrive')->nullable();
+            $table->dateTime('depart')->nullable();
+            $table->foreign('employe')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

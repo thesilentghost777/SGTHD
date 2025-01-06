@@ -17,9 +17,9 @@ return new class extends Migration
             $table->unsignedBigInteger('producteur');
             $table->unsignedBigInteger('produit');
             $table->integer('expected_quantity');
-            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
-            $table->foreign('chef_production')->references('id')->on('users');
-            $table->foreign('producteur')->references('id')->on('users');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
+            $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('producteur')->references('id')->on('users')->onDelete('cascade');
             $table->date('assignment_date');
             $table->Integer('status');
             $table->timestamps();

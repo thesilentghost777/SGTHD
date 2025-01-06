@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('chef_production');
             $table->string('libelle', 255);
             $table->unsignedBigInteger('montant');
-            $table->foreign('chef_production')->references('id')->on('users');
+            $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

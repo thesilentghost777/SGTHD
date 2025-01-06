@@ -18,8 +18,8 @@ return new class extends Migration
             $table->smallInteger('somme');
             $table->unsignedBigInteger('verseur');
             $table->unsignedBigInteger('encaisseur');
-            $table->foreign('verseur')->references('id')->on('users');
-            $table->foreign('encaisseur')->references('id')->on('users');
+            $table->foreign('verseur')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('encaisseur')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

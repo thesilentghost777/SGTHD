@@ -12,8 +12,35 @@ class SalaireController extends Controller
 {
     public function reclamerAs()
     {
+        $employe = auth()->user();
+
+        if(!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        // Vérification de la date
+        if (now()->day < 9) {
+            return view('pages.error_as', [
+                'error' => 'Vous ne pouvez pas réclamer l\'AS avant le 9 de chaque mois',
+                'hasRequest' => false
+            ]);
+        }
+
+        // Vérification si l'employé a déjà une avance ce mois-ci
+        $hasRequest = AvanceSalaire::where('id_employe', $employe->id)
+            ->whereMonth('mois_as', now()->month)
+            ->exists();
+
+        if ($hasRequest) {
+            return view('pages.error_as', [
+                'error' => 'Vous avez déjà soumis une demande pour ce mois-ci',
+                'hasRequest' => true
+            ]);
+        }
+
+        // Si toutes les conditions sont satisfaites
         $as = new AvanceSalaire();
-        return view('salaires.reclamer-as');
+        return view('salaires.reclamer-as', compact('as'));
     }
 
     public function store_demandes_AS(Request $request)
@@ -23,13 +50,13 @@ class SalaireController extends Controller
         ]);
 
         $salaire = Salaire::where('id_employe', Auth::id())->first();
-        
+
         if (!$salaire) {
             return redirect()->back()->with('error', 'Aucun salaire trouvé.');
         }
 
         $sommeRestante = $salaire->somme - $request->sommeAs;
-        
+
         if ($sommeRestante < 5000) {
             return redirect()->back()->with('error', 'Le montant demandé est trop élevé.');
         }
@@ -49,23 +76,23 @@ class SalaireController extends Controller
         $as = AvanceSalaire::where('id_employe', Auth::id())
             ->whereMonth('created_at', now()->month)
             ->first();
-            
+
         return view('salaires.status', compact('as'));
     }
 
     public function validerAs()
     {
-        
+
         $demandes = AvanceSalaire::with('employe')
             ->where('flag', false)
             ->get();
-            
+
         return view('salaires.valider-as', compact('demandes'));
     }
 
     public function store_validation(Request $request)
     {
-        
+
         $request->validate([
             'as_id' => 'required|exists:avance_salaires,id',
             'decision' => 'required|boolean'
@@ -84,7 +111,7 @@ class SalaireController extends Controller
             ->where('flag', true)
             ->where('retrait_valide', false)
             ->first();
-            
+
         return view('salaires.validation-retrait', compact('as'));
     }
 
@@ -99,18 +126,18 @@ class SalaireController extends Controller
 
     public function valider_retraitcp()
     {
-        
+
         $demandes = AvanceSalaire::with('employe')
             ->where('retrait_demande', true)
             ->where('retrait_valide', false)
             ->get();
-            
+
         return view('salaires.valider-retrait-cp', compact('demandes'));
     }
 
     public function recup_retrait_cp(Request $request)
     {
-        
+
         $as = AvanceSalaire::findOrFail($request->as_id);
         $as->retrait_valide = true;
         $as->save();
@@ -129,14 +156,14 @@ class SalaireController extends Controller
 
     public function form_salaire()
     {
-        
+
         $employes = User::all();
         return view('salaires.form', compact('employes'));
     }
 
     public function store_salaire(Request $request)
     {
-        
+
         $request->validate([
             'id_employe' => 'required|exists:users,id',
             'somme' => 'required|numeric|min:0'

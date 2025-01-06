@@ -6,24 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('Utilisation', function (Blueprint $table) {
-            $table->unsignedBigInteger('produit');
-            $table->unsignedBigInteger('matierep');
-            $table->unsignedBigInteger('producteur');
-            $table->primary(['produit', 'matierep']);
-            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
-            $table->foreign('producteur')->references('id')->on('users');
-            $table->foreign('matierep')->references('code_mp')->on('Matiere');
-            $table->timestamps();
-        });
-    }
+    public function up()
+{
+    Schema::create('Utilisation', function (Blueprint $table) {
+        $table->id();
+        $table->string('id_lot', 20);
+        $table->index('id_lot');
+        $table->unsignedBigInteger('produit');  // Type correspond maintenant à code_produit
+        $table->unsignedBigInteger('matierep');
+        $table->unsignedBigInteger('producteur');
+        $table->decimal('quantite_produit', 10, 2);
+        $table->decimal('quantite_matiere', 10, 3);
+        $table->string('unite_matiere');
+        $table->timestamps();
 
-    /**
+        $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+        $table->foreign('matierep')->references('id')->on('Matiere');
+        $table->foreign('producteur')->references('id')->on('users');
+    });
+}
+
+ /**
      * Reverse the migrations.
      */
     public function down(): void

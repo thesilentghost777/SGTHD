@@ -13,9 +13,12 @@ use App\Http\Controllers\GlaceController;
 use App\Http\Controllers\PointeurController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\SalaireController;
-
-
-
+use App\Http\Controllers\HoraireController;
+use App\Http\Controllers\FichePaieController;
+use App\Http\Controllers\PrimeController;
+use App\Http\Controllers\RecetteController;
+use App\Http\Controllers\ReservationMpController;
+use App\Http\Controllers\AssignationMatiereController;
 
 Route::get('/', function () {
     return view('index');
@@ -60,7 +63,6 @@ Route::get('/producteur/produit', [ProducteurController::class,'produit'])->name
 Route::get('/producteur/pdefault', [ProducteurController::class,'pdefault'])->name('producteur_default');
 
 Route::get('producteur/dashboard', [ProducteurController::class, 'dashboard'])->name('producteur-dashboard');
-Route::get('producteur/fiche_production', [ProducteurController::class, 'fiche_production'])->name('producteur-fiche_production');
 Route::get('producteur/commande', [ProducteurController::class, 'commande'])->name('producteur-commande');
 Route::get('serveur/ajouterProduit_recu', [ServeurController::class, 'ajouterProduit_recu'])->name('serveur-ajouterProduit_recu');
 Route::post('serveur/store', [ServeurController::class, 'store'])->name('addProduit_recu');
@@ -104,4 +106,95 @@ Route::middleware(['auth'])->group(function () {
     // Routes pour le CP
         Route::get('/valider-retraitcp', [SalaireController::class, 'valider_retraitcp'])->name('valider-retraitcp');
         Route::post('/recup-retrait-cp', [SalaireController::class, 'recup_retrait_cp'])->name('recup-retrait-cp');
+
+        Route::get('/horaire', [HoraireController::class, 'index'])->name('horaire.index');
+        Route::post('/horaire/arrivee', [HoraireController::class, 'marquerArrivee'])->name('horaire.arrivee');
+        Route::post('/horaire/depart', [HoraireController::class, 'marquerDepart'])->name('horaire.depart');
+        Route::post('/horaire/enregistrer', [HoraireController::class, 'enregistrerHoraire'])->name('horaire.enregistrer');
+
+        Route::get('/fiche-paie', [FichePaieController::class, 'show'])->name('fiche-paie.show');
+
+        Route::get('/producteur/stat-production', [ProducteurController::class, 'stat_prod'])
+        ->name('producteur.sp');
+
+        Route::get('/producteur/produit_mp', [ProducteurController::class, 'create'])
+        ->name('produitmp');
+
+
+        Route::get('/manquants', [MessageController::class, 'showManquants'])
+        ->name('manquant');
+
+        Route::get('/chef_production/ajouter_produits', [Chef_productionController::class, 'gestionProduits'])
+        ->name('chef_produits');
+
+        Route::get('/chef_production/ajouter_matiere', [Chef_productionController::class, 'gestionMatieres'])
+        ->name('chef_matieres');
+
+        Route::post('producteur/store2', [ProducteurController::class, 'store2'])
+        ->name('utilisations.store');
+
+
+
+
+        //cp
+        // Gestion des produits
+        Route::get('cp/produits', [Chef_productionController::class, 'gestionProduits'])
+            ->name('chef.produits.index');
+        Route::post('cp/produits', [Chef_productionController::class, 'storeProduit'])
+            ->name('chef.produits.store');
+        Route::put('cp/produits/{produit}', [Chef_productionController::class, 'updateProduit'])
+            ->name('chef.produits.update');
+        Route::delete('cp/produits/{produit}', [Chef_productionController::class, 'destroyProduit'])
+            ->name('chef.produits.destroy');
+
+        // Gestion des matières premières
+        Route::get('cp/matieres', [Chef_productionController::class, 'gestionMatieres'])
+            ->name('chef.matieres.index');
+        Route::post('cp/matieres', [Chef_productionController::class, 'storeMatiere'])
+            ->name('chef.matieres.store');
+        Route::put('/chef/matieres/{matiere}', [Chef_productionController::class, 'updateMatiere'])->name('chef.matieres.update');
+        Route::delete('/chef/matieres/{matiere}', [Chef_productionController::class, 'destroyMatiere'])->name('chef.matieres.destroy');
+        Route::get('/chef/matieres/{matiere}/edit', [Chef_productionController::class, 'editMatiere'])->name('chef.matieres.edit');
+
+        Route::get('/mes_primes', [PrimeController::class, 'index'])->name('primes.index');
+        Route::get('/attribution-prime', [PrimeController::class, 'create'])
+                 ->name('primes.create');
+        Route::post('/attribution-prime', [PrimeController::class, 'store'])
+                 ->name('primes.store');
+
+         Route::get('/recettes', [RecetteController::class, 'index'])->name('recettes.index');
+         Route::get('/recettes/create', [RecetteController::class, 'create'])->name('recettes.create');
+         Route::post('/recettes', [RecetteController::class, 'store'])->name('recettes.store');
+         Route::post('/recettes/calculate', [RecetteController::class, 'calculateIngredients'])->name('recettes.calculate');
+         Route::delete('/recettes/{produit}', [RecetteController::class, 'destroy'])->name('recettes.destroy');
+         Route::get('/producteur/comparaison', [ProducteurController::class, 'comparaison'])->name('producteur.comparaison');
+         Route::get('/producteur/lots', [ProducteurController::class, 'produit_par_lot'])->name('producteur.lots');
+         Route::get('/production/fiche', [ProducteurController::class, 'fiche_production'])->name('production.fiche');
+
+         // Réservation de matières premières
+    Route::get('/producteur/reserver-mp', [ReservationMpController::class, 'create'])
+    ->name('producteur.reservations.create');
+Route::post('/producteur/reserver-mp', [ReservationMpController::class, 'store'])
+    ->name('producteur.reservations.store');
+
+// Voir ses assignations
+Route::get('/producteur/mes-assignations', [AssignationMatiereController::class, 'index'])
+    ->name('producteur.assignations.index');
+
+    // Gestion des réservations
+    Route::get('/chef/reservations', [ReservationMpController::class, 'index'])
+        ->name('chef.reservations.index');
+    Route::post('/chef/reservations/{reservation}/valider', [ReservationMpController::class, 'validerReservation'])
+        ->name('chef.reservations.valider');
+    Route::post('/chef/reservations/{reservation}/refuser', [ReservationMpController::class, 'refuserReservation'])
+        ->name('chef.reservations.refuser');
+
+    // Assignation de matières premières
+    Route::get('/chef/assignations/create', [AssignationMatiereController::class, 'create'])
+        ->name('chef.assignations.create');
+    Route::post('/chef/assignations', [AssignationMatiereController::class, 'store'])
+        ->name('chef.assignations.store');
+
+
 });
+

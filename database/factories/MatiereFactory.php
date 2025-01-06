@@ -16,8 +16,8 @@ class MatiereFactory extends Factory
     public function definition(): array
     {
         return [
-            
-            'nom' => fake()->unique()->randomElement([
+
+            'nom' => fake()->randomElement([
                 'Farine',
                 'Sucre',
                 'Sel',

@@ -1,0 +1,21 @@
+/* Custom styles for the dashboard */
+.trend-up {
+    color: #10B981;
+}
+
+.trend-down {
+    color: #EF4444;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+
+.stat-card {
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}

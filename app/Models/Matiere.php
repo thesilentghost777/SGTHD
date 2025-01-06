@@ -2,22 +2,51 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\UniteMinimale;
+use App\Services\MatiereService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Matiere extends Model
 {
-    protected $fillable = [
-        'producteur',
-        'produit',
-        'nom',
-        'prix',
-        'quantite',
-        'created_at',
-        'updated_at'
-    ];
-    protected $table = 'Matiere';
     use HasFactory;
-    
-    // ... rest of your model code
+    protected $table = 'Matiere';
+    protected $fillable = [
+        'nom',
+        'unite_minimale',
+        'unite_classique',
+        'quantite_par_unite',
+        'quantite',
+        'prix_unitaire',
+        'prix_par_unite_minimale'
+    ];
+
+    protected $casts = [
+        'unite_minimale' => UniteMinimale::class
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($matiere) {
+            $service = new MatiereService();
+            $matiere->prix_par_unite_minimale = $service->calculerPrixParUniteMinimale(
+                $matiere->prix_unitaire,
+                $matiere->quantite_par_unite,
+                $matiere->unite_classique,
+                $matiere->unite_minimale->value
+            );
+        });
+
+        static::updating(function ($matiere) {
+            $service = new MatiereService();
+            $matiere->prix_par_unite_minimale = $service->calculerPrixParUniteMinimale(
+                $matiere->prix_unitaire,
+                $matiere->quantite_par_unite,
+                $matiere->unite_classique,
+                $matiere->unite_minimale->value
+            );
+        });
+    }
 }

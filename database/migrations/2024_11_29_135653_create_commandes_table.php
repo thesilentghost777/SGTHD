@@ -17,7 +17,7 @@ return new class extends Migration
             $table->dateTime('date_commande');
             $table->unsignedBigInteger('produit')->nullable();
             $table->integer('quantite');
-            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
             $table->string('categorie');
             $table->timestamps();
         });

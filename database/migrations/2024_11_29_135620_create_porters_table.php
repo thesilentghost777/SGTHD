@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Porter', function (Blueprint $table) {
-            $table->unsignedBigInteger('produit');
+            $table->id('id');
+            $table->unsignedBigInteger('matiere');
             $table->unsignedBigInteger('facture');
             $table->tinyInteger('quantite');
-            $table->primary(['produit', 'facture']);
-            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
-            $table->foreign('facture')->references('code_fac')->on('Facture');
+            $table->foreign('matiere')->references('id')->on('Matiere')->onDelete('cascade');
+            $table->foreign('facture')->references('code_fac')->on('Facture')->onDelete('cascade');
             $table->timestamps();
         });
     }

@@ -1,71 +1,150 @@
-#formulaire {
-    display: none;
-    position: relative;
-    left: 35em;
-    top: 10em;
-    max-width: 500px;
-    margin: 20px auto;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    background-color: #f9f9f9;
+/* Styles généraux */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f8fb;
+    color: #333;
 }
 
-#bouton {
-    position: absolute;
-    left: 85%;
-    display: block;
+h2, h3 {
+    color: #004080;
+}
+
+#main_class {
     margin: 20px auto;
-    padding: 10px 20px;
-    background-color: #4CAF50;
+    max-width: 1200px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Bouton Ajouter Produit */
+#bouton {
+    background-color: #0e66c4;
     color: white;
     border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    padding: 10px 20px;
     font-size: 16px;
-    transition: background-color 0.3s;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s ease;
 }
 
 #bouton:hover {
-    background-color: #45a049;
+    background-color: #017cff;
 }
 
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+/* Formulaire */
+#formulaire {
+    display: none;
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #1d6fc7;
+    border-radius: 8px;
+    background-color: #f9fcff;
 }
 
-label {
-    font-weight: bold;
-    margin-bottom: 5px;
+#formulaire label {
+    display: block;
+    margin-bottom: 8px;
+    color: #004080;
 }
 
-select {
+#formulaire input,
+#formulaire select {
+    width: 100%;
     padding: 10px;
+    margin-bottom: 15px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 5px;
     font-size: 14px;
 }
-input[type="text"],
-input[type="number"] {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
 
-input[type="submit"] {
-    padding: 10px;
-    background-color: #008CBA;
+#formulaire input[type="submit"] {
+    background-color: #1a6bc2;
     color: white;
     border: none;
-    border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease;
 }
 
-input[type="submit"]:hover {
-    background-color: #006F8E;
+#formulaire input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+/* Tableaux */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+table th,
+table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+table th {
+    background-color: #1d6abc;
+    color: white;
+    text-transform: uppercase;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9fcff;
+}
+
+table tr:hover {
+    background-color: #d9e8f8;
+}
+
+/* Section datetime */
+#datetime {
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #eef4fc;
+    border-radius: 5px;
+    color: #004080;
+    font-weight: bold;
+    text-align: right;
+}
+
+/* Progression */
+.progress-bar {
+    position: relative;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    overflow: hidden;
+    height: 20px;
+    margin: 10px 0;
+}
+
+.progress-bar > div {
+    height: 100%;
+    background-color: #007bff;
+    width: 0;
+    transition: width 0.5s ease;
+    border-radius: 5px;
+}
+
+.status-complete {
+    color: green;
+    font-weight: bold;
+}
+
+.status-pending {
+    color: orange;
+    font-weight: bold;
+}
+
+.status-overdue {
+    color: red;
+    font-weight: bold;
 }

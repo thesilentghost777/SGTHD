@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('nom', 50);
             $table->smallInteger('prix');
             $table->smallInteger('quantite');
-            $table->foreign('pointeur')->references('id')->on('users');
-            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+            $table->foreign('pointeur')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
             $table->timestamps();
         });
     }

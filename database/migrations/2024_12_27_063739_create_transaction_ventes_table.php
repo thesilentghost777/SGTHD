@@ -16,14 +16,14 @@ class CreateTransactionVentesTable extends Migration
         Schema::create('transaction_ventes', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('produit');
-            $table->tinyInteger('serveur');
+            $table->unsignedBigInteger('serveur');
             $table->Integer('quantite');
             $table->Integer('prix');
             $table->date('date_vente');
             $table->string('type');
             $table->string('monnaie');
             $table->timestamps();
-            $table->foreign('produit')->references('code_produit')->on('produit_fixes')
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes')
             ->onDelete('cascade');
             $table->foreign('serveur')->references('id')->on('users')->onDelete('cascade');
         });

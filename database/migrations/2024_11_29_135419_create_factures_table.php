@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('Facture', function (Blueprint $table) {
             $table->unsignedBigInteger('code_fac')->autoIncrement();
-            $table->unsignedBigInteger('produit')->nullable();
+            $table->unsignedBigInteger('matiere')->nullable();
             $table->unsignedBigInteger('chef_production');
             $table->dateTime('date');
-            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
-            $table->foreign('chef_production')->references('id')->on('users');
+            $table->foreign('matiere')->references('id')->on('Matiere')->onDelete('cascade');
+            $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

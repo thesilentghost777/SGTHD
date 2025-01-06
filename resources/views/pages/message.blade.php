@@ -1,3 +1,7 @@
+@extends('layouts.app')
+
+@section('content')
+<br>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -205,7 +209,7 @@
             </select>
 
             <textarea id="messageContent" name="message" placeholder="Écrivez votre message ici..."></textarea>
-            
+
             <div class="success-message" id="successMessage">Message envoyé avec succès !</div>
             <div class="error-message" id="errorMessage">Erreur lors de l'envoi du message.</div>
 
@@ -221,6 +225,7 @@
         <button id="cancelButton">Annuler</button>
     </div>
 
-   
+
 </body>
 </html>
+@endsection

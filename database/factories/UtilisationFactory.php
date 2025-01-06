@@ -2,22 +2,18 @@
 
 namespace Database\Factories;
 
+use App\Models\Utilisation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Utilisation>
- */
 class UtilisationFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    public function definition(): array
+    protected $model = Utilisation::class;
+
+    public function definition()
     {
         return [
-            //
+            'quantite' => $this->faker->numberBetween(1, 10),
+            'created_at' => $this->faker->dateTimeBetween('2025-01-01', '2025-12-31'),
         ];
     }
 }

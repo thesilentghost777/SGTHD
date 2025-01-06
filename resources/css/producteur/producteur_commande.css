@@ -1,0 +1,199 @@
+/* Style général du corps */
+body {
+    background: #f0f5ff;
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Container principal */
+.container {
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 0 25px rgba(0, 0, 255, 0.1);
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Section info utilisateur */
+.user-info {
+    background: linear-gradient(135deg, #0047AB, #4169E1);
+    color: white;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 255, 0.2);
+}
+
+.user-info h4 {
+    font-size: 24px;
+    margin: 0 0 15px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.user-info p {
+    font-size: 16px;
+    margin: 8px 0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* En-tête de la section */
+.section-header {
+    margin: 30px 0;
+    border-bottom: 3px solid #0047AB;
+    padding-bottom: 10px;
+}
+
+.section-header h2 {
+    color: #0047AB;
+    font-size: 28px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+/* Table des commandes */
+.commandes-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 20px 0;
+}
+
+/* En-tête de la table */
+.commandes-table thead tr {
+    background: #0047AB;
+    color: white;
+}
+
+.commandes-table th {
+    padding: 15px;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: left;
+}
+
+.commandes-table th:first-child {
+    border-top-left-radius: 10px;
+}
+
+.commandes-table th:last-child {
+    border-top-right-radius: 10px;
+}
+
+/* Corps de la table */
+.commandes-table td {
+    padding: 15px;
+    border-bottom: 2px solid #e6e6ff;
+    background: white;
+}
+
+.commandes-table tbody tr {
+    transition: all 0.3s ease;
+}
+
+.commandes-table tbody tr:hover {
+    background: #f0f5ff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 255, 0.1);
+    cursor: pointer;
+}
+
+/* Alternance des couleurs des lignes */
+.commandes-table tbody tr:nth-child(even) {
+    background-color: #f8faff;
+}
+
+/* Colonnes spécifiques */
+.commandes-table td:first-child { /* ID */
+    font-weight: bold;
+    color: #0047AB;
+}
+
+.commandes-table td:nth-child(3) { /* Date */
+    color: #666;
+}
+
+/* État vide */
+.empty-state {
+    background: #f0f5ff;
+    border: 2px dashed #0047AB;
+    border-radius: 10px;
+    padding: 50px;
+    text-align: center;
+    margin: 30px 0;
+}
+
+.empty-state p {
+    color: #0047AB;
+    font-size: 18px;
+    margin: 0;
+}
+
+/* Effets de survol sur les boutons et interactions */
+.commandes-table tbody tr:hover td {
+    background-color: #e6eeff;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.container {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        padding: 15px;
+    }
+
+    .user-info {
+        padding: 15px;
+    }
+
+    .commandes-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .commandes-table th,
+    .commandes-table td {
+        padding: 12px 15px;
+    }
+
+    .section-header h2 {
+        font-size: 24px;
+    }
+}
+
+/* Personnalisation de la barre de défilement */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #0047AB;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #003380;
+}
