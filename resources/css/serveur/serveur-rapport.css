@@ -1,0 +1,173 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+}
+/* ========== Responsive Design ========== */
+
+/* 📱 Écrans de taille intermédiaire (tablettes) */
+@media screen and (max-width: 1024px) {
+    .rapport-container {
+        width: 90%;
+        padding: 15px;
+    }
+
+    table th, table td {
+        padding: 8px;
+    }
+
+    h1, h2, h3 {
+        font-size: 1.5em;
+    }
+
+    button {
+        width: 80%;
+        font-size: 14px;
+    }
+}
+
+/* 📱 Écrans de petite taille (mobiles) */
+@media screen and (max-width: 768px) {
+    .rapport-container {
+        width: 95%;
+        padding: 10px;
+    }
+
+    table th, table td {
+        padding: 6px;
+        font-size: 14px;
+    }
+
+    h1, h2, h3 {
+        font-size: 1.2em;
+        color: #2c3e50;
+    }
+
+    button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        background-color: #27ae60;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    
+    button:hover {
+        background-color: #219150;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    table thead {
+        display: table;
+        width: 100%;
+    }
+
+    table tbody {
+        display: table;
+        width: 100%;
+    }
+
+    table th, table td {
+        white-space: nowrap;
+    }
+}
+
+/* 📱 Écrans très petits (mobiles < 480px) */
+@media screen and (max-width: 480px) {
+    h1, h2, h3 {
+        font-size: 1em;
+        color: #2c3e50;
+    }
+
+    .rapport-container {
+        padding: 5px;
+        
+    }
+
+    table th, table td {
+        font-size: 12px;
+        padding: 4px;
+    }
+
+    button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        background-color: #27ae60;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    
+    button:hover {
+        background-color: #219150;
+    }
+}
+
+.rapport-container {
+    width: 80%;
+    margin: auto;
+    background-color: #ffffff;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+    color: #2c3e50;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table th, table td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+}
+
+table th {
+    background-color: #2c3e50;
+    color: white;
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #219150;
+}
+@media print {
+    button {
+        display: none;
+    }
+    
+}

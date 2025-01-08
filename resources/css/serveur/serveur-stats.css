@@ -1,0 +1,249 @@
+/* .stats-overview {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.stats-overview div {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.filter-section {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.filter-section label {
+    margin-right: 10px;
+}
+
+.filter-section select {
+    width: 200px;
+    padding: 5px;
+} */
+ /* Container styling */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+
+.filter-section {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 255, 0.1);
+}
+
+#period {
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 1rem;
+}
+
+.stats-overview {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.stats-overview h3 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+}
+
+.list-group-item {
+    font-size: 1rem;
+    font-weight: 500;
+    border: none;
+}
+
+
+.table {
+    margin-bottom: 20px;
+    background-color: #fff;
+}
+
+.table thead {
+    background-color: #007bff;
+    color: #fff;
+    
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+.table-primary {
+    background-color: #007bff;
+    color: #fff;
+}
+.table-dark {
+    background-color: #084e98;
+    color: #fff;
+    text-align: center;
+    margin: 45%;
+}
+
+.table-bordered {
+    border: 1px solid #dee2e6;
+}
+
+
+tfoot {
+    background-color: #f8f9fa;
+}
+
+/* ========== Responsive Design ========== */
+
+/* 📱 Écrans intermédiaires (tablettes, entre 768px et 1024px) */
+@media screen and (max-width: 1024px) {
+    .container {
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    .filter-section {
+        padding: 10px;
+    }
+
+    #period {
+        font-size: 0.9rem;
+        padding: 4px 8px;
+    }
+
+    .stats-overview h3 {
+        font-size: 1.5rem;
+    }
+
+    .table {
+        font-size: 0.95rem;
+        display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    }
+}
+
+/* 📱 Écrans petits (mobiles, entre 480px et 768px) */
+@media screen and (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    .filter-section {
+        padding: 8px;
+    }
+
+    #period {
+        font-size: 0.85rem;
+        padding: 4px 6px;
+    }
+
+    .stats-overview {
+        padding: 15px;
+    }
+
+    .stats-overview h3 {
+        font-size: 1.4rem;
+    }
+
+    .table {
+        font-size: 0.9rem;
+        display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    }
+
+    .table-dark {
+        margin: 20%;
+    }
+}
+
+/* 📱 Écrans très petits (mobiles < 480px) */
+@media screen and (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .filter-section {
+        padding: 5px;
+    }
+
+    #period {
+        font-size: 0.8rem;
+        padding: 3px 5px;
+    }
+
+    .stats-overview {
+        padding: 10px;
+    }
+
+    .stats-overview h3 {
+        font-size: 1.2rem;
+    }
+
+    .table {
+        font-size: 0.85rem;
+        display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    }
+
+    .table-dark {
+        margin: 10%;
+    }
+
+    .list-group-item {
+        font-size: 0.9rem;
+    }
+
+    tfoot {
+        font-size: 0.85rem;
+    }
+}
+
