@@ -27,6 +27,16 @@ class Produit_fixes extends Model
 {
     return $this->hasMany(MatiereRecommander::class, 'produit', 'code_produit');
 }
+public function productions(){
+    return $this->hasMany(Production::class,'produit','code_produit');
+}
+public function receptions(){
+return $this->hasMany(ProduitRecu::class,'produit','code_produit');
+}
+public function ventes(){
+return $this->hasMany(Transaction_vente::class,'produit','code_produit');
+ }
+
 
 }
 
