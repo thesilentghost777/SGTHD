@@ -18,4 +18,11 @@ class Transaction_vente extends Model
         'created_at',
         'updated_at'
     ];
+    public function produit(){
+        return $this->belongsTo(Produit_fixes::class,'code_produit','code_produit');
+         }
+         public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
