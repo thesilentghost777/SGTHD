@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('code_vcsg')->autoIncrement();
             $table->string('libelle', 50);
             $table->date('date');
-            $table->smallInteger('somme');
+            $table->Integer('somme');
             $table->unsignedBigInteger('verseur');
             $table->unsignedBigInteger('encaisseur');
             $table->foreign('verseur')->references('id')->on('users')->onDelete('cascade');
