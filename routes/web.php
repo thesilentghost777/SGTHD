@@ -19,7 +19,7 @@ use App\Http\Controllers\PrimeController;
 use App\Http\Controllers\RecetteController;
 use App\Http\Controllers\ReservationMpController;
 use App\Http\Controllers\AssignationMatiereController;
-
+use App\Http\Middleware\CheckRole;
 Route::get('/', function () {
     return view('index');
 });
@@ -67,20 +67,6 @@ Route::get('producteur/commande', [ProducteurController::class, 'commande'])->na
 Route::get('serveur/ajouterProduit_recu', [ServeurController::class, 'ajouterProduit_recu'])->name('serveur-ajouterProduit_recu');
 Route::post('serveur/store', [ServeurController::class, 'store'])->name('addProduit_recu');
 
-Route::get('serveur/dashboard', [ServeurController::class,'dashboard'])->name('serveur-dashboard');
-Route::get('serveur/enrProduit_vendu', [ServeurController::class, 'enrProduit_vendu'])->name('serveur-enrProduit_vendu');
-Route::post('serveur/store_vendu', [ServeurController::class, 'store_vendu'])->name('saveProduit_vendu');
-Route::post('serveur/nbre_sacs_vendu', [ServeurController::class, 'nbre_sacs_vendu'])->name('serveur-nbre_sacs_vendu');
-
-Route::get('serveur/produit_invendu', [ServeurController::class, 'produit_invendu'])->name('serveur-produit_invendu');
-Route::post('serveur/store_invendu', [ServeurController::class, 'store_invendu'])->name('saveProduit_invendu');
-Route::post('serveur/produit_avarier', [ServeurController::class, 'produit_avarier'])->name('serveur-produit_avarier');
-
-Route::get('serveur/versement', [ServeurController::class, 'versement'])->name('serveur-versement');
-Route::post('serveur/store_versement', [ServeurController::class, 'store_versement'])->name('save_versement');
-Route::post('serveur/monnaie_recu', [ServeurController::class, 'monnaie_recu'])->name('serveur-monnaie_recu');
-
-Route::get('serveur/fiche_versement', [ServeurController::class, 'fiche_versement'])->name('serveur-fiche_versement');
 Route::get('message', [MessageController::class, 'message'])->name('message');
 Route::post('message/store_message', [MessageController::class, 'store_message'])->name('message-post');
 
@@ -194,7 +180,34 @@ Route::get('/producteur/mes-assignations', [AssignationMatiereController::class,
         ->name('chef.assignations.create');
     Route::post('/chef/assignations', [AssignationMatiereController::class, 'store'])
         ->name('chef.assignations.store');
-
-
 });
+//Differente Routes pour le serveur
+Route::get('serveur/stats/{period?}',[ServeurController::class,'stats'])->name('serveur-stats');
+
+Route::get('/statistiques', [ServeurController::class, 'statistique'])->name('statistiques');
+
+Route::get('/classement', [ServeurController::class, 'classement'])->name('serveur-classement');
+Route::get('/serveur/rapport', [ServeurController::class, 'rapportVente'])->name('serveur-rapport');
+
+Route::post('/recuperer-invendus', [ServeurController::class, 'recupererInvendus'])->name('recupererInvendus');
+
+Route::get('serveur/versement_cp', [ServeurController::class, 'versement_cp'])->name('serveur-versement_cp');
+Route::post('serveur/store_versement_cp', [ServeurController::class, 'store_versement_cp'])->name('save_versement_cp');
+Route::get('serveur/aide',[ServeurController::class,'aide'])->name('aide');
+Route::get('serveur/dashboard', [ServeurController::class,'dashboard'])->name('serveur-dashboard')->middleware('role:serveur');
+Route::get('serveur/enrProduit_vendu', [ServeurController::class, 'enrProduit_vendu'])->name('serveur-enrProduit_vendu');
+Route::post('serveur/store_vendu', [ServeurController::class, 'store_vendu'])->name('saveProduit_vendu');
+Route::get('serveur/nbre_sacs', [ServeurController::class, 'nbre_sacs_vente'])->name('serveur-nbre_sacs_vente');
+Route::post('serveur/nbre_sacs_vente', [ServeurController::class, 'nbre_sacs'])->name('serveur-nbre_sacs');
+
+Route::get('serveur/produit_invendu', [ServeurController::class, 'produit_invendu'])->name('serveur-produit_invendu');
+Route::post('serveur/store_invendu', [ServeurController::class, 'store_invendu'])->name('saveProduit_invendu');
+Route::post('serveur/produit_avarier', [ServeurController::class, 'produit_avarier'])->name('serveur-produit_avarier');
+
+Route::get('serveur/versement', [ServeurController::class, 'versement'])->name('serveur-versement');
+Route::post('serveur/store_versement', [ServeurController::class, 'store_versement'])->name('save_versement');
+Route::post('serveur/monnaie_recu', [ServeurController::class, 'monnaie_recu'])->name('serveur-monnaie_recu');
+
+Route::get('serveur/fiche_versement', [ServeurController::class, 'fiche_versement'])->name('serveur-fiche_versement');
+
 
