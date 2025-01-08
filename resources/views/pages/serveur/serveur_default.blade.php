@@ -1,17 +1,19 @@
-@vite(['resources/css/serveur/serveur_default.css','resources/js/serveur/serveur_default.js'])
 <html><head><base href="/" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<link rel="stylesheet" href="{{ asset('css/serveur/serveur_default.css') }}">
 <style>
-    :root {
+  /* ===== Variables Globales ===== */
+:root {
     --primary-color: #1e3c72;
     --secondary-color: #2a5298;
     --sidebar-width: 280px;
 }
 
+/* ===== Styles Globaux ===== */
 body {
     margin: 0;
     font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -21,6 +23,7 @@ body {
 .dashboard-container {
     display: flex;
     min-height: 100vh;
+    flex-direction: row;
 }
 
 .sidebar {
@@ -31,287 +34,144 @@ body {
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
 }
 
-.logo-container {
-    text-align: center;
-    padding: 20px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.logo-container h1 {
-    margin: 0;
-    font-size: 24px;
-}
-
-.logo-container span {
-    font-size: 12px;
-    opacity: 0.7;
-}
-
-.menu-section {
-    margin-top: 30px;
-}
-
-.menu-section h3 {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 15px;
-    opacity: 0.7;
-}
-
-.menu-items {
-    list-style: none;
-    padding: 0;
-}
-
-.menu-item {
-    padding: 12px 15px;
-    margin: 5px 0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s;
-    display: flex;
-    align-items: center;
-}
-
-.menu-item:hover {
-    background: rgba(255,255,255,0.1);
-}
-
-.menu-item i {
-    margin-right: 10px;
-}
-
 .main-content {
     flex: 1;
     padding: 30px;
     overflow-y: auto;
 }
 
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
+/* ========== Responsive Design ========== */
+
+/* 📱 Écrans de taille intermédiaire (tablettes) */
+@media screen and (max-width: 1024px) {
+    .sidebar {
+        width: 220px;
+    }
+
+    .dashboard-container {
+        flex-direction: column;
+    }
+
+    .main-content {
+        padding: 20px;
+    }
+
+    .stats-container {
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    }
 }
 
-.stats-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+/* 📱 Écrans de petite taille (mobiles) */
+@media screen and (max-width: 1024px) {
+    .sidebar {
+        position: absolute;
+        width: 100%;
+        height: 500%;
+        left: -100%;
+        transition: left 0.3s ease;
+    }
+
+    .sidebar.active {
+        left: 0;
+    }
+
+    .menu-item {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+
+    .task {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .task-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .product-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .clock-widget {
+        font-size: 1.5em;
+    }
 }
 
-.stat-card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+/* 📱 Écrans très petits (mobiles < 480px) */
+@media screen and (max-width: 480px) {
+    .sidebar {
+        padding: 15px;
+    }
+
+    .logo-container h1 {
+        font-size: 20px;
+    }
+
+    .menu-item {
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    .form-group input, .form-group select {
+        padding: 6px;
+    }
+
+    .clock-time {
+        font-size: 2em;
+    }
+
+    .action-button {
+        padding: 6px 12px;
+    }
+
+   
 }
 
-.task-list {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.task-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.task {
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.action-button {
-    padding: 8px 15px;
+.logout-btn {
+    background-color: #FF6347;
+    color: #fff;
+    padding: 10px;
     border: none;
     border-radius: 5px;
-    background: var(--primary-color);
-    color: white;
     cursor: pointer;
-    transition: transform 0.3s;
+    margin-top: 10px;
 }
 
-.action-button:hover {
-    transform: translateY(-2px);
+.logout-btn:hover {
+    background-color: #FF4500;
 }
-
-.profile-section {
-    position: relative;
-    padding: 20px 15px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    margin-top: auto;
-}
-
-.profile-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.profile-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.user-details {
-    font-size: 14px;
-}
-
-.user-details .name {
-    font-weight: 500;
-}
-
-.user-details .role {
-    opacity: 0.7;
-    font-size: 12px;
-}
-
-.product-form {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 30px;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-}
-
-.form-group input, .form-group select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-}
-
-.product-list {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.product-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.product-item:last-child {
-    border-bottom: none;
-}
-
-.btn-edit {
-    background: #4CAF50;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    border: none;
+.menu-toggle {
+    display: none;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 24px;
     cursor: pointer;
-}
-
-.clock-in-out {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 30px;
-    text-align: center;
-}
-
-.time-display {
-    font-size: 2em;
-    margin: 10px 0;
     color: var(--primary-color);
 }
 
-.notification-badge {
-    background: #ff4444;
-    color: white;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 12px;
-    margin-left: 5px;
+@media screen and (max-width: 768px) {
+    .menu-toggle {
+        display: block;
+    }
 }
 
-.clock-widget {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.clock-time {
-    font-size: 2.5em;
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
-.clock-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
-}
-
-.clock-btn {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.clock-in {
-    background: #4CAF50;
-    color: white;
-}
-
-.clock-out {
-    background: #f44336;
-    color: white;
-}
-
-.sales-form {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-}
 </style>
 </head>
 <body>
+<div class="menu-toggle" onclick="toggleSidebar()">☰</div>
+
 <div class="dashboard-container">
     <aside class="sidebar">
         <div class="logo-container">
@@ -324,20 +184,31 @@ body {
             <ul class="menu-items">
                 <li class="menu-item">
                     <i class="mdi mdi-basket"></i>
-                     <a href="{{route('serveur-dashboard')}} " style=color:white;> Produits reçus</a>
+                     <a href="{{route('serveur-ajouterProduit_recu')}}" data-url="{{route('serveur-ajouterProduit_recu')}}" style=color:white;> Produits reçus</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-cash-register"></i>
-                    <a href="{{route('serveur-dashboard')}} " style=color:white;>Ventes du jour </a>
+                    <a href="{{route('serveur-enrProduit_vendu')}}"class="load-content" data-url="{{route('serveur-enrProduit_vendu')}}" style=color:white;>Ventes du jour </a>
                     
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-package-variant"></i>
-                    Produits invendus
+                  <a href="{{route('serveur-produit_invendu')}}"class="load-content"data-url="{{route('serveur-produit_invendu')}}" style=color:white;> Produits invendus</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-currency-usd"></i>
-                    Versements
+                   <a href="{{route('serveur-versement')}}" class="load-content"data-url="{{route('serveur-versement')}}" style=color:white;>Versements en Caisse</a>
+                </li>
+                <li class="menu-item">
+                    <i class="mdi mdi-currency-usd"></i>
+                   <a href="{{route('serveur-versement_cp')}}" class="load-content"data-url="{{route('serveur-versement_cp')}}" style=color:white;>Versements au CP</a>
+                </li>
+                <li class="menu-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 2L18 2L20 6L4 6L6 2Z" fill="#007BFF"/>
+                    <path d="M4 6H20V22H4V6Z" fill="#E0E0E0"/> 
+                    </svg>
+                   <a href="{{route('serveur-nbre_sacs_vente')}}" class="load-content"data-url="{{route('serveur-nbre_sacs_vente')}}" style=color:white;>Sacs Reçu </a>
                 </li>
             </ul>
         </div>
@@ -347,11 +218,15 @@ body {
             <ul class="menu-items">
                 <li class="menu-item">
                     <i class="mdi mdi-chart-bar"></i>
-                    Statistiques
+                    <a href="{{route('statistiques')}}" data-url="{{route('statistiques')}}" style=color:white;>Statistiques</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-alert-circle"></i>
-                    Manquants <span class="notification-badge">3</span>
+                    Manquants <span class="notification-badge">2</span>
+                </li>
+                <li class="menu-item">
+                    <i class="mdi mdi-currency-usd"></i>
+                    Prime
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-file-document"></i>
@@ -363,6 +238,10 @@ body {
         <div class="menu-section">
             <h3>Communications</h3>
             <ul class="menu-items">
+            <li class="menu-item">
+            <i class="mdi mdi-help-circle"></i>
+            <a href="{{route('aide')}}" class="load-content" data-url="{{route('aide')}}"style=color:white;>Aide</a>
+            </li>
                 <li class="menu-item">
                     <i class="mdi mdi-help-circle"></i>
                     Réclamer AS
@@ -392,10 +271,22 @@ body {
                     <div class="role">Serveur(se)</div>
                 </div>
             </div>
+            <button class="logout-btn" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                <i class="mdi mdi-logout"></i> Déconnexion
+            </button>
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                @csrf
+            </form>
         </div>
     </aside>
 
     <main class="main-content">
             </main>
 </div>
+<script>
+    function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.classList.toggle('active');
+}
 
+</script>
