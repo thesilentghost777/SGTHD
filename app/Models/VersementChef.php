@@ -3,8 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 class VersementChef extends Model
 {
-    protected $table = 'Versement_chef';
+    use HasFactory;
+    protected $primaryKey='code_vc';
+    protected $fillable = [
+        'chef_production',
+        'libelle',
+        'montant',
+        'created_at',
+        'updated_at'
+    ];
 }
