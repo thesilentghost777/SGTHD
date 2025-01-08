@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('code_vc')->autoIncrement();
             $table->unsignedBigInteger('chef_production');
             $table->string('libelle', 255);
-            $table->unsignedBigInteger('montant');
+            $table->Integer('montant');
             $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
