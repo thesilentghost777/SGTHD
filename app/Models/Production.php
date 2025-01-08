@@ -33,4 +33,7 @@ class Production extends Model
     {
         return $this->belongsTo(User::class, 'producteur', 'id');
     }
+    public function produit_fixe(){
+        return $this->belongsTo(Produit_fixes::class,'code_produit','code_produit');
+     }
 }
