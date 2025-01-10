@@ -19,7 +19,7 @@ use App\Http\Controllers\PrimeController;
 use App\Http\Controllers\RecetteController;
 use App\Http\Controllers\ReservationMpController;
 use App\Http\Controllers\AssignationMatiereController;
-
+use App\Http\Controllers\StockController;
 Route::get('/', function () {
     return view('index');
 });
@@ -50,7 +50,6 @@ Route::get('pdg/dashboard', [PdgController::class,'dashboard'])->name('pdg-dashb
 
 Route::get('pointeur/dashboard', [PointeurController::class, 'dashboard'])->name('pointeur-dashboard');
 
-Route::get('chef_production/dashboard', [Chef_productionController::class, 'dashboard'])->name('chef_production-dashboard');
 
 Route::get('glace/dashboard', [GlaceController::class, 'dashboard'])->name('glace-dashboard');
 
@@ -190,11 +189,50 @@ Route::get('/producteur/mes-assignations', [AssignationMatiereController::class,
         ->name('chef.reservations.refuser');
 
     // Assignation de matières premières
+
     Route::get('/chef/assignations/create', [AssignationMatiereController::class, 'create'])
-        ->name('chef.assignations.create');
-    Route::post('/chef/assignations', [AssignationMatiereController::class, 'store'])
-        ->name('chef.assignations.store');
+        ->name('chef.assignations');
+
+     // Routes pour les commandes
+     Route::get('/chef_production/commandes/create', [Chef_productionController::class, 'createcommande'])
+     ->name('chef.commandes.create');
+    Route::post('/chef/commandes', [Chef_productionController::class, 'storecommande'])
+     ->name('chef.commandes.store');
+     Route::get('/commandes/{id}/edit', [Chef_productionController::class, 'editcommande'])->name('commande.edit');
+     Route::put('/commandes/{id}', [Chef_productionController::class, 'updatecommande'])->name('commande.update');
+     Route::delete('/commandes/{id}', [Chef_productionController::class, 'destroycommande'])->name('chef.commandes.destroy');
+ // Route pour créer une nouvelle assignation
+ Route::post('/chef/commandes', [AssignationMatiereController::class, 'storeassignation'])
+     ->name('chef.commandes.store');
+
+ // Route pour mettre à jour une assignation
+ Route::put('/chef/assignations/{assignation}', [AssignationMatiereController::class, 'update'])
+     ->name('chef.assignations.update');
+
+ // Route pour supprimer une assignation
+ Route::delete('/chef/assignations/{assignation}', [AssignationMatiereController::class, 'destroy'])
+     ->name('chef.assignations.destroy');
+     Route::get('cp/dashboard', [Chef_productionController::class, 'index'])->name('chef.dashboard');
+    Route::post('/assigner-production', [Chef_productionController::class, 'assignerProduction'])
+         ->name('chef.assigner-production');
+         Route::get('/api/user-info', [Chef_productionController::class, 'getUserInfo']);
+         Route::get('/sidebar', [Chef_productionController::class, 'getUserInfos']);
+
+         Route::prefix('stock')->group(function () {
+            Route::get('/', [StockController::class, 'index'])->name('stock.index');
+            Route::get('/search-matiere', [StockController::class, 'searchMatiere'])->name('stock.search-matiere');
+            Route::get('/search-produit', [StockController::class, 'searchProduit'])->name('stock.search-produit');
+        Route::post('/adjust-matiere-quantity/{matiere}', [StockController::class, 'adjustMatiereQuantity'])->name('stock.adjust-matiere-quantity');
+        Route::post('/adjust-produit-quantity/{produit}', [StockController::class, 'adjustProduitQuantity'])->name('stock.adjust-produit-quantity');
+        Route::get('/api/produits/{produit}', [StockController::class, 'getProduit'])->name('stock.get-produit');
+    });
 
 
-});
+
+    Route::get('/manquant/create', [Chef_productionController::class, 'createmanquant'])->name('manquant.create');
+    Route::post('/manquant/store', [Chef_productionController::class, 'storemanquant'])->name('manquant.store');
+
+
+
+ });
 

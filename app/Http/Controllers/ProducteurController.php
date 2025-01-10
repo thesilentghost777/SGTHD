@@ -169,7 +169,7 @@ private function getPeriode(): array
     $secteur = $info->secteur;
 
     // Récupération des commandes
-    $commandes = Commande::where('categorie', $role)->get();
+    $commandes = Commande::where('categorie', $role)->where('valider',0)->get();
     return view('pages/producteur/producteur_commande', compact('nom', 'secteur', 'commandes'));
 }
 

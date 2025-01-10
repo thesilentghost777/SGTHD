@@ -1,6 +1,6 @@
-@extends('layouts.app')
+@extends('pages.chef_production.chef_production_default')
 
-@section('content')
+@section('page-content')
 <div class="container mx-auto px-4 py-6">
     <h1 class="text-2xl font-bold mb-6">Gestion des Réservations de Matières Premières</h1>
 

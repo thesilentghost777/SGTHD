@@ -38,7 +38,9 @@
                 <ul class="space-y-2">
                     <li><a href="{{ route('producteur_produit') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-clipboard-text mr-2"></i>Produits du jour</a></li>
                     <li><a href="{{ route('producteur-commande') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-cart mr-2"></i>Commandes</a></li>
-                    <li class="flex items-center p-2 rounded hover:bg-white/10 cursor-pointer"><i class="mdi mdi-archive mr-2"></i>Réservation MP</li>
+                    <li class="flex items-center p-2 rounded hover:bg-white/10 cursor-pointer"><a href="{{ route('producteur.reservations.create') }}"><i class="mdi mdi-archive mr-2"></i>Réservation MP</a></li>
+                    <li class="flex items-center p-2 rounded hover:bg-white/10 cursor-pointer"><a href="{{ route('producteur.assignations.index') }}"><i class="mdi mdi-archive mr-2"></i>Assignation Mp</a></li>
+
                 </ul>
             </div>
 		 <!-- General Section -->

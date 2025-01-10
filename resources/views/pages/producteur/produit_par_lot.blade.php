@@ -184,7 +184,7 @@
                     <tr>
                         <th>Valeur de la production</th>
                         <th>Coût des matières</th>
-                        <th>Bénéfice</th>
+                        <th>Bénéfice Estimer(brut)</th>
                     </tr>
                 </thead>
                 <tbody>

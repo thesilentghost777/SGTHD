@@ -19,6 +19,7 @@ return new class extends Migration
             $table->integer('quantite');
             $table->foreign('produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
             $table->string('categorie');
+            $table->boolean('valider')->default(false);
             $table->timestamps();
         });
     }

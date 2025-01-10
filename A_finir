@@ -7,4 +7,6 @@ gerer les vues au niveau de quantie de matiere (ce n'est pas la quantite en kg m
 
 creer une vue de restitution de matiere premiere permettant au producteur et cp de pouvoir recuperer les matiere restantes
 
+a tous les niveaux ou on peut ajouter en groupe les produits ou les matiere c'7  mieux que 1 par 1
 
+dans la vue reservation mp pour le producteur :: ajouter la liste des matiere reserveer en bas

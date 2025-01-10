@@ -19,12 +19,15 @@ class ReservationMpController extends Controller
 
     public function index()
     {
+        $employe = auth()->user();
+        $nom = $employe->name;
+        $role = $employe->role;
         $reservations = ReservationMp::with(['producteur', 'matiere'])
             ->where('statut', 'en_attente')
             ->get();
         $matieres = Matiere::all();
 
-        return view('pages.chef_production.gestion_reservation', compact('reservations','matieres'));
+        return view('pages.chef_production.gestion_reservation', compact('reservations','matieres','nom','role'));
     }
 
     public function create()

@@ -1,2 +1,0 @@
-//recuperer bcp de collone        $id = Production::where('producteur', $employe->id)->pluck('produit')->toArray();
-//recuperer une seule collone $id = User::where('name', $name)->value('id');
