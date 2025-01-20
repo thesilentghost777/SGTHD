@@ -1,0 +1,96 @@
+.stat-container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.top-product {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+}
+
+.chart-container {
+    position: relative;
+    margin: 20px auto;
+    height: 400px;
+    width: 400px;
+}
+
+h2 {
+    color: #007bff;
+}
+
+h3 {
+    color: #343a40;
+}
+
+p {
+    font-size: 18px;
+    color: #555;
+}
+.top-product p {
+    color: #28a745;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+
+canvas {
+    display: block;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    .stat-container {
+        padding: 15px;
+    }
+
+    .chart-container {
+        position: relative;
+        margin: 20px auto;
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+    }
+    
+
+    h2, h3 {
+        font-size: 20px;
+    }
+
+    p {
+        font-size: 16px;
+    }
+}
+
+/* Écrans de téléphones (max-width: 480px) */
+@media (max-width: 480px) {
+    .stat-container {
+        padding: 10px;
+        margin: 20px;
+    }
+
+    .chart-container {
+        position: relative;
+        margin: 20px auto;
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+    }
+    
+
+    h2, h3 {
+        font-size: 18px;
+    }
+
+    p {
+        font-size: 14px;
+    }
+}

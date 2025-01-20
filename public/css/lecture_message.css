@@ -1,0 +1,233 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Segoe UI, Helvetica Neue, Helvetica, Lucida Grande, Arial, Ubuntu, Cantarell, Fira Sans, sans-serif;
+    background: #eee;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+h1 {
+    color: #128C7E;
+    margin-bottom: 20px;
+    font-weight: 300;
+}
+
+.chat-container {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-type {
+    border-bottom: 1px solid #E8EAEF;
+    transition: all 0.3s ease;
+}
+
+.chat-type:hover {
+    background: #F5F6F8;
+}
+
+.chat-header {
+    padding: 15px 20px;
+    background: linear-gradient(to right, #25D366, #128C7E);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-header h2 {
+    margin: 0;
+    font-size: 16px;
+    color: white;
+    font-weight: 500;
+}
+
+.unread-count {
+    background: #34B7F1;
+    color: white;
+    border-radius: 15px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.messages-container {
+    background: #E8EAEF;
+    padding: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.message {
+    padding: 12px 15px;
+    margin: 8px 0;
+    border-radius: 10px;
+    position: relative;
+    max-width: 85%;
+    width: fit-content;
+    transition: all 0.3s ease;
+}
+
+.message.unread {
+    background: linear-gradient(45deg, #DCF8C6, #E8F5E9);
+    margin-left: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.message.read {
+    background: linear-gradient(45deg, #E8EAF6, #C5CAE9);
+    margin-left: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.message-header strong {
+    color: #128C7E;
+}
+
+.message-time {
+    color: #667781;
+    font-size: 11px;
+    margin-left: 10px;
+}
+
+.message-text {
+    color: #303030;
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.message-date {
+    font-size: 11px;
+    color: #667781;
+    text-align: right;
+}
+
+.delete-btn {
+    position: absolute;
+    top: 50%;
+    left: -30px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #DC3545;
+    font-size: 20px;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-btn:hover {
+    background: rgba(220, 53, 69, 0.1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.message:hover .delete-btn {
+    opacity: 1;
+}
+
+.no-messages {
+    padding: 30px;
+    text-align: center;
+    color: #667781;
+    font-style: italic;
+    background: #F8F9FA;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+/* Style de la scrollbar */
+.messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Animation pour les nouveaux messages */
+@keyframes slideIn {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.message {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Styles pour le bouton de retour */
+.back-button-container {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    background: linear-gradient(to right, #1877F2, #0099FF);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.back-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(to right, #0099FF, #1877F2);
+}
+
+.back-button i {
+    margin-right: 10px;
+}
