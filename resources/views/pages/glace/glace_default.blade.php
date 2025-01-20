@@ -1,6 +1,7 @@
-@vite(['resources/css/glace/glace_default.css','resources/js/glace/glace_default.js'])
+
 <html><head><base href="/" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="{{asset('css/glace/glace_default.css')}}">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
@@ -14,22 +15,23 @@
             <h1>TH MARKET</h1>
             <span>Section Glaces</span>
         </div>
+       
         
         <div class="menu-section">
             <h3>Ventes</h3>
             <ul class="menu-items">
-                <li class="menu-item">
-                    <i class="mdi mdi-ice-cream"></i>
-                    Ventes du jour
+            <li class="menu-item">
+                <i class="mdi mdi-ice-cream"></i>
+                    <a href="{{route('glace-vente')}}"class="load-content" data-url="{{route('glace-vente')}}" style=color:white;>Ventes du jour </a>
                 </li>
                 <li class="menu-item">
-                    <i class="mdi mdi-cash-register"></i>
-                    Versements
-                    <span class="notification-badge">2</span>
+                <i class="mdi mdi-cash-register"></i>
+                   <a href="{{route('serveur-versement')}}" class="load-content"data-url="{{route('serveur-versement')}}" style=color:white;>Versements</a>
                 </li>
+                
                 <li class="menu-item">
-                    <i class="mdi mdi-file-document"></i>
-                    Fiche de versements
+                <i class="mdi mdi-file-document"></i>
+                    <a href="{{route('serveur-fiche_versement')}}"data-url="{{route('serveur-fiche_versement')}}"style=color:white;>Fiche de versement</a>
                 </li>
             </ul>
         </div>
@@ -37,17 +39,21 @@
         <div class="menu-section">
             <h3>Général</h3>
             <ul class="menu-items">
-                <li class="menu-item">
+            <li class="menu-item">
                     <i class="mdi mdi-chart-bar"></i>
-                    Statistiques
+                    <a href="{{route('glace-stat')}}" data-url="{{route('glace-stat')}}" style=color:white;>Statistiques</a>
+                </li>
+                <li class="menu-item">
+                    <i class="mdi mdi-clock-check"></i>
+                    <a href="{{route('horaire.index')}}"  data-url="{{route('horaire.index')}}"style=color:white;>Horaire</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-alert-circle"></i>
-                    Manquants <span class="notification-badge">3</span>
+                    <a href="{{route('manquant')}}" class="load-content" data-url="{{route('manquant')}}"style=color:white;>Manquant</a>
                 </li>
                 <li class="menu-item">
-                    <i class="mdi mdi-file-document"></i>
-                    Fiche de paie
+                    <i class="mdi mdi-file-document-multiple"></i>
+                    <a href="{{route('fiche-paie.show')}}" class="load-content" data-url="{{route('fiche-paie.show')}}"style=color:white;>Fiche de Paie</a>
                 </li>
             </ul>
         </div>
@@ -55,21 +61,27 @@
         <div class="menu-section">
             <h3>Communications</h3>
             <ul class="menu-items">
-                <li class="menu-item">
-                    <i class="mdi mdi-help-circle"></i>
-                    Réclamer AS
+            <li class="menu-item">
+                    <i class="mdi mdi-message-alert"></i>
+                    <a href="{{route('reclamer-as')}}" class="load-content" data-url="{{route('reclamer-as')}}"style=color:white;>Réclamer AS</a>
                 </li>
                 <li class="menu-item">
-                    <i class="mdi mdi-message-alert"></i>
-                    Plainte privée
+                    
+                    <a href="{{ route('validation-retrait') }}"style=color:white; ><i class="mdi mdi-currency-usd mr-2"></i>Retirer Avance Salaire</a>
+                </li>
+                <li class="menu-item">
+                    <i class="mdi mdi-message-text"></i>
+                    <a href="{{route('message')}}" class="load-content" data-url="{{route('message')}}"style=color:white;>Plainte privée</a>
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-lightbulb-on"></i>
-                    Suggestions
+                    <a href="{{route('message')}}" class="load-content" data-url="{{route('message')}}"style=color:white;>Suggestions</a>
+                    
                 </li>
                 <li class="menu-item">
                     <i class="mdi mdi-alert"></i>
-                    Signalements
+                    <a href="{{route('message')}}" class="load-content" data-url="{{route('message')}}"style=color:white;>Signalements</a>
+                    
                 </li>
             </ul>
         </div>
@@ -80,11 +92,17 @@
                     <i class="mdi mdi-account"></i>
                 </div>
                 <div class="user-details">
-                    <div class="name">Jane Doe</div>
-                    <div class="role">Vendeuse de Glace</div>
+                    <div class="name">{{$user->name}}</div>
+                    <div class="role">Vendeur(se) de Glace</div>
                 </div>
             </div>
         </div>
+        <button class="logout-btn" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+            <i class="mdi mdi-logout"></i> Déconnexion
+        </button>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
     </aside>
 
     
