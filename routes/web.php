@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
- use App\Http\Controllers\ProducteurController;
+use App\Http\Controllers\ProducteurController;
 use App\Http\Controllers\DgController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DdgController;
@@ -19,6 +19,8 @@ use App\Http\Controllers\PrimeController;
 use App\Http\Controllers\RecetteController;
 use App\Http\Controllers\ReservationMpController;
 use App\Http\Controllers\AssignationMatiereController;
+use App\Http\Controllers\EmployeStandardController;
+use App\Http\Controllers\CaissiereController;
 use App\Http\Middleware\CheckRole;
 Route::get('/', function () {
     return view('index');
@@ -209,5 +211,25 @@ Route::post('serveur/store_versement', [ServeurController::class, 'store_verseme
 Route::post('serveur/monnaie_recu', [ServeurController::class, 'monnaie_recu'])->name('serveur-monnaie_recu');
 
 Route::get('serveur/fiche_versement', [ServeurController::class, 'fiche_versement'])->name('serveur-fiche_versement');
-
+//pointeur
+Route::get('pointeur/dashboard', [PointeurController::class, 'dashboard'])->name('pointeur-dashboard');
+Route::get('pointeur/ajouterProduit_recu', [PointeurController::class, 'ajouterProduit_recu'])->name('pointeur-ajouterProduit_recu');
+Route::post('pointeur/store', [PointeurController::class,'store'])->name('pointeur-store');
+Route::get('pointeur/afficheProduit', [PointeurController::class, 'afficheProduit'])->name('pointeur-afficheProduit_recu');
+Route::get('pointeur/valider-commandes', [PointeurController::class, 'showNonValide'])->name('valider-commandes');
+Route::post('pointeur/valider/{id}', [PointeurController::class, 'validerCommande'])->name('valider-commande');
+Route::get('pointeur/classement', [PointeurController::class, 'comparaison'])->name('classement');
+Route::get('produit/edit/{produit}', [PointeurController::class, 'edit'])->name('produit.edit');
+Route::post('produit/update/{produit}', [PointeurController::class, 'update'])->name('produit.update');
+Route::get('pointeur/statistique',[PointeurController::class,'statistique'])->name('statistique');
+//employe lamda
+Route::get('employe/dashboard', [EmployeStandardController::class, 'dashboard'])->name('employe-dashboard');
+//Glace
+Route::get('glace/dashboard', [GlaceController::class, 'dashboard'])->name('glace-dashboard');
+Route::get('glace/vente', [GlaceController::class, 'vente'])->name('glace-vente');
+Route::post('glace/store', [GlaceController::class, 'store'])->name('glace-store');
+Route::get('glace/stats',[GlaceController::class,'stat'])->name('glace-stat');
+//Caissier(e)
+Route::get('caissier/dashboard',[CaissiereController::class,'dashboard'])->name('caisse-dashboard');
+Route::get('caissier/stats',[CaissiereController::class,'stat'])->name('caisse-stat');
 
