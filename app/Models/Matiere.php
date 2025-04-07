@@ -6,6 +6,7 @@ use App\Enums\UniteMinimale;
 use App\Services\MatiereService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Matiere extends Model
 {
@@ -48,5 +49,30 @@ class Matiere extends Model
                 $matiere->unite_minimale->value
             );
         });
+    }
+
+    public function assignations(): HasMany
+    {
+        return $this->hasMany(AssignationMatiere::class, 'matiere_id');
+    }
+
+    public function factureDetails(): HasMany
+    {
+        return $this->hasMany(FactureComplexeDetail::class, 'matiere_id');
+    }
+
+    public function complexe(): HasOne
+    {
+        return $this->hasOne(MatiereComplexe::class, 'matiere_id');
+    }
+
+    public function provientDuComplexe()
+    {
+        return $this->complexe()->exists();
+    }
+
+    public function getPrixComplexeAttribute()
+    {
+        return $this->complexe ? $this->complexe->prix_complexe : null;
     }
 }

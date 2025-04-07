@@ -37,7 +37,7 @@
             </div>
 
             <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-                <h3 class="text-sm font-medium text-gray-600">Chiffre d'affaire brut journalier</h3>
+                <h3 class="text-sm font-medium text-gray-600">Benefice potentiel brut journalier</h3>
                 <p class="mt-2 text-3xl font-semibold text-gray-900">{{ number_format($beneficeBrut) }}</p>
                 <div class="mt-1 text-sm text-gray-500">FCFA</div>
             </div>
@@ -170,7 +170,7 @@
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Sélectionner un produit</option>
                         @foreach($produits as $produit)
-                            <option value="{{ $produit->code_produit }}">{{ $produit->nom }}</option>
+                            <option value="{{ $produit->code_produit }}">{{ $produit->nom }}-{{ $produit->prix }}</option>
                         @endforeach
                     </select>
                 </div>

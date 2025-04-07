@@ -1,6 +1,6 @@
-@extends('pages.chef_production.chef_production_default')
+@extends('layouts.app')
 
-@section('page-content')
+@section('content')
 <div class="flex items-center justify-center min-h-screen bg-gray-100">
     <!-- Box principale -->
     <div class="max-w-xl bg-white p-6 rounded-lg shadow-lg relative">

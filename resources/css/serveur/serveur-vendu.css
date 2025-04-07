@@ -1,0 +1,226 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f4f8;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    text-align: center;
+    color: #1a73e8;
+    margin-top: 20px;
+}
+
+#form-container {
+    width: 40%;
+    margin: 40px auto;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label, select, input {
+    font-size: 16px;
+    margin-bottom: 15px;
+    padding: 10px;
+}
+
+select, input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+input[type="submit"] {
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: #218838;
+}
+
+.error-messages {
+    color: red;
+    margin-bottom: 15px;
+}
+
+.success-message {
+    color: green;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+footer {
+    text-align: center;
+    margin-top: 20px;
+    color: #555;
+}
+/* barre de recherche */
+.search-container {
+    margin-bottom: 10px;
+    text-align: right;
+}
+
+#searchBar {
+    width: 300px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+#productTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#productTable th, #productTable td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+#productTable tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#productTable tr:hover {
+    background-color: #f1f1f1;
+}
+.rapport-link {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #3498db;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.rapport-link:hover {
+    background-color: #2980b9;
+}
+
+/* ========== Responsive Design ========== */
+
+/* 📱 Écrans intermédiaires (tablettes, entre 768px et 1024px) */
+@media screen and (max-width: 1024px) {
+    #form-container {
+        width: 60%;
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    select, input[type="number"], #searchBar {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    input[type="submit"] {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    .rapport-link {
+        font-size: 14px;
+        padding: 8px 15px;
+    }
+
+    #productTable th, #productTable td {
+        padding: 8px;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+/* 📱 Écrans petits (mobiles, entre 480px et 768px) */
+@media screen and (max-width: 768px) {
+    #form-container {
+        width: 80%;
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    select, input[type="number"], #searchBar {
+        font-size: 13px;
+        padding: 6px;
+    }
+
+    input[type="submit"] {
+        font-size: 13px;
+        padding: 8px;
+    }
+
+    .rapport-link {
+        font-size: 13px;
+        padding: 7px 12px;
+    }
+
+    #productTable th, #productTable td {
+        padding: 6px;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+/* 📱 Écrans très petits (mobiles < 480px) */
+@media screen and (max-width: 480px) {
+    #form-container {
+        width: 90%;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    select, input[type="number"], #searchBar {
+        font-size: 12px;
+        padding: 5px;
+    }
+
+    input[type="submit"] {
+        font-size: 12px;
+        padding: 6px;
+    }
+
+    .rapport-link {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+
+    #searchBar {
+        width: 100%;
+    }
+
+    #productTable th, #productTable td {
+        padding: 5px;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}

@@ -1,401 +1,156 @@
-@vite(['resources/css/serveur/serveur_default.css','resources/js/serveur/serveur_default.js'])
-<html><head><base href="/" />
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-<style>
-    :root {
-    --primary-color: #1e3c72;
-    --secondary-color: #2a5298;
-    --sidebar-width: 280px;
-}
+@extends('layouts.app')
 
-body {
-    margin: 0;
-    font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f5f6fa;
-}
-
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
-}
-
-.sidebar {
-    width: var(--sidebar-width);
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    padding: 20px;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-}
-
-.logo-container {
-    text-align: center;
-    padding: 20px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.logo-container h1 {
-    margin: 0;
-    font-size: 24px;
-}
-
-.logo-container span {
-    font-size: 12px;
-    opacity: 0.7;
-}
-
-.menu-section {
-    margin-top: 30px;
-}
-
-.menu-section h3 {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 15px;
-    opacity: 0.7;
-}
-
-.menu-items {
-    list-style: none;
-    padding: 0;
-}
-
-.menu-item {
-    padding: 12px 15px;
-    margin: 5px 0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s;
-    display: flex;
-    align-items: center;
-}
-
-.menu-item:hover {
-    background: rgba(255,255,255,0.1);
-}
-
-.menu-item i {
-    margin-right: 10px;
-}
-
-.main-content {
-    flex: 1;
-    padding: 30px;
-    overflow-y: auto;
-}
-
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.stats-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.stat-card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.task-list {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.task-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.task {
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.action-button {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    background: var(--primary-color);
-    color: white;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-
-.action-button:hover {
-    transform: translateY(-2px);
-}
-
-.profile-section {
-    position: relative;
-    padding: 20px 15px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    margin-top: auto;
-}
-
-.profile-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.profile-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.user-details {
-    font-size: 14px;
-}
-
-.user-details .name {
-    font-weight: 500;
-}
-
-.user-details .role {
-    opacity: 0.7;
-    font-size: 12px;
-}
-
-.product-form {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 30px;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-}
-
-.form-group input, .form-group select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-}
-
-.product-list {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.product-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.product-item:last-child {
-    border-bottom: none;
-}
-
-.btn-edit {
-    background: #4CAF50;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    border: none;
-    cursor: pointer;
-}
-
-.clock-in-out {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 30px;
-    text-align: center;
-}
-
-.time-display {
-    font-size: 2em;
-    margin: 10px 0;
-    color: var(--primary-color);
-}
-
-.notification-badge {
-    background: #ff4444;
-    color: white;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 12px;
-    margin-left: 5px;
-}
-
-.clock-widget {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.clock-time {
-    font-size: 2.5em;
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
-.clock-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
-}
-
-.clock-btn {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.clock-in {
-    background: #4CAF50;
-    color: white;
-}
-
-.clock-out {
-    background: #f44336;
-    color: white;
-}
-
-.sales-form {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-}
-</style>
+@section('content')
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TH Market Dashboard</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<div class="dashboard-container">
-    <aside class="sidebar">
-        <div class="logo-container">
-            <h1>TH MARKET</h1>
-            <span>Powered by SGc</span>
-        </div>
-        
-        <div class="menu-section">
-            <h3>Ventes</h3>
-            <ul class="menu-items">
-                <li class="menu-item">
-                    <i class="mdi mdi-basket"></i>
-                     <a href="{{route('serveur-dashboard')}} " style=color:white;> Produits reçus</a>
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-cash-register"></i>
-                    <a href="{{route('serveur-dashboard')}} " style=color:white;>Ventes du jour </a>
-                    
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-package-variant"></i>
-                    Produits invendus
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-currency-usd"></i>
-                    Versements
-                </li>
-            </ul>
-        </div>
+<body class="bg-gray-50">
+    <div x-data="{ sidebarOpen: false }" class="min-h-screen">
+        <!-- Mobile menu button -->
+        <button
+            @click="sidebarOpen = !sidebarOpen"
+            class="lg:hidden fixed z-50 top-4 left-4 p-2 rounded-md bg-blue-600 text-white shadow-lg">
+            <i class="mdi mdi-menu text-2xl"></i>
+        </button>
 
-        <div class="menu-section">
-            <h3>Général</h3>
-            <ul class="menu-items">
-                <li class="menu-item">
-                    <i class="mdi mdi-chart-bar"></i>
-                    Statistiques
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-alert-circle"></i>
-                    Manquants <span class="notification-badge">3</span>
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-file-document"></i>
-                    Fiche de paie
-                </li>
-            </ul>
-        </div>
+        <!-- Sidebar -->
+        <aside
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+            class="fixed inset-y-0 left-0 z-40 w-72 bg-gradient-to-br from-blue-800 to-blue-600 text-white transform transition-transform duration-300 ease-in-out overflow-y-auto">
 
-        <div class="menu-section">
-            <h3>Communications</h3>
-            <ul class="menu-items">
-                <li class="menu-item">
-                    <i class="mdi mdi-help-circle"></i>
-                    Réclamer AS
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-message-alert"></i>
-                    Plainte privée
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-lightbulb-on"></i>
-                    Suggestions
-                </li>
-                <li class="menu-item">
-                    <i class="mdi mdi-alert"></i>
-                    Signalements
-                </li>
-            </ul>
-        </div>
+            <!-- Logo -->
+            <div class="px-6 py-8 border-b border-white/20">
+                <h1 class="text-2xl font-bold text-center">TH MARKET</h1>
+                <p class="text-xs text-center text-blue-100">Powered by SGc</p>
+            </div>
 
-        <div class="profile-section">
-            <div class="profile-info">
-                <div class="profile-avatar">
-                    <i class="mdi mdi-account"></i>
+            <!-- Menu Items -->
+            <nav class="p-6 space-y-8">
+                <!-- Ventes Section -->
+                <div>
+                    <h3 class="text-xs font-semibold tracking-wider uppercase text-blue-100 mb-3">Ventes</h3>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="{{ route('seller.workspace') }}" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                               <i class="mdi mdi-view-dashboard mr-3 text-blue-200 group-hover:text-white"></i>
+                               <span>Dashboard</span>
+                            </a>
+                           </li>
+                           <li>
+                            <a href="{{ route('cash.distributions.index') }}" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                                <i class="mdi mdi-package-variant-closed-check mr-3 text-blue-200 group-hover:text-white"></i>
+                                <span>Demarrer une session de vente</span>
+                              </a>
+                           </li>
+                           <li>
+                            <a href="{{ route('serveur-ajouterProduit_recu') }}" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                               <i class="mdi mdi-package-variant-closed-check mr-3 text-blue-200 group-hover:text-white"></i>
+                               <span>Produits reçus</span>
+                            </a>
+                           </li>
+                        <li>
+                            <a href="{{ route('serveur-produit_invendu') }}" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                               <i class="mdi mdi-chart-line mr-3 text-blue-200 group-hover:text-white"></i>
+                               <span>Ventes du jour</span>
+                            </a>
+                           </li>
+                           <li>
+                            <a href="{{ route('serveur-nbre_sacs_vente') }}" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                               <i class="mdi mdi-package-variant mr-3 text-blue-200 group-hover:text-white"></i>
+                               <span>Sac et contenant</span>
+                            </a>
+                           </li>
+                           <li>
+                            <a href="{{ route('versements.index') }}" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                               <i class="mdi mdi-bank-transfer mr-3 text-blue-200 group-hover:text-white"></i>
+                               <span>Versement</span>
+                            </a>
+                           </li>
+                    </ul>
                 </div>
-                <div class="user-details">
-                    <div class="name">{{$nom}}</div>
-                    <div class="role">Serveur(se)</div>
+
+                <!-- Général Section -->
+                <div>
+                    <h3 class="text-xs font-semibold tracking-wider uppercase text-blue-100 mb-3">Général</h3>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="{{ route('serveur-stats') }}" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                                <i class="mdi mdi-chart-bar mr-3 text-blue-200 group-hover:text-white"></i>
+                                <span>Statistiques</span>
+                            </a>
+                        </li>
+                        <li><a href="{{ route('producteur.lots') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-eye mr-2"></i>Details des Ventes</a></li>
+                        <li><a href="{{ route('manquant.view') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-alert-circle mr-2"></i>Manquants</a></li>
+                        <li><a href="{{ route('manquant.mes-deductions') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-alert-circle mr-2"></i>Montant a deduire au salaire</a></li>
+                        <li><a href="{{ route('primes.index') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-gift mr-2"></i>Primes</a></li>
+                        <li>
+                            <a href="{{ route('loans.my-loans') }}" class="flex items-center p-2 rounded hover:bg-white/10">
+                                <i class="mdi mdi-cash-multiple mr-2"></i> Effectuer un prêt
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.claim') }}" class="flex items-center p-2 rounded hover:bg-white/10">
+                                <i class="mdi mdi-currency-usd mr-2 text-lg"></i> <!-- Remplacez mdi-coins par une icône valide -->
+                                <span>Ration Journalière</span>
+                            </a>
+                        </li>
+
+                        <li><a href="{{ route('horaire.index') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-clock-check mr-2"></i>Horaires</a></li>
+                        <li><a href="{{ route('consulterfp') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-file-document-multiple mr-2"></i>Fiche de paie</a></li>
+                        <li><a href="{{ route('producteur.comparaison') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-podium mr-2"></i>Classement</a></li>
+
+                    </ul>
+                </div>
+
+                <!-- Communications Section -->
+                <div>
+                    <h3 class="text-xs font-semibold tracking-wider uppercase text-blue-100 mb-3">Communications</h3>
+                    <ul class="space-y-2">
+                        <li>
+                            <li>
+                                <a href="{{ route('extras.index2') }}" class="flex items-center p-2 rounded hover:bg-white/10">
+                                    <i class="mdi mdi-gavel mr-2"></i> Réglementation
+                                </a>
+                            </li>
+                            <li><a href="{{ route('reclamer-as') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-cash mr-2"></i>Reclamer Avance Salaire</a></li>
+                            <li><a href="{{ route('validation-retrait') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-currency-usd mr-2"></i>Retirer Avance Salaire</a></li>
+                            <li><a href="{{ route('message') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-message-text mr-2"></i>Messages privés et suggestions</a></li>
+                            <li><a href="{{ route('message') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-alert mr-2"></i>Signalements</a></li>
+
+                        </li>
+                        <!-- Autres items du menu communications... -->
+                    </ul>
+                </div>
+            </nav>
+
+           <!-- Profile Section -->
+        <div class="mt-auto border-t border-white/20 pt-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="mdi mdi-account-circle text-xl"></i>
+                </div>
+                <div>
+                    <div class="font-medium">{{ $nom }}</div>
+                    <div class="text-sm opacity-70">Vendeur(se)</div>
                 </div>
             </div>
         </div>
-    </aside>
+        </aside>
 
-    <main class="main-content">
-            </main>
-</div>
-
+        <!-- Main Content -->
+        <main class="p-15" style="margin-left: 300px;">
+            <div class="container mx-auto">
+                @yield('page-content')
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+@endsection

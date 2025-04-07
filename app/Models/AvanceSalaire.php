@@ -18,6 +18,13 @@ class AvanceSalaire extends Model
         'mois_as'
     ];
 
+    protected $casts = [
+        'mois_as' => 'date',
+        'flag' => 'boolean',
+        'retrait_demande' => 'boolean',
+        'retrait_valide' => 'boolean',
+    ];
+
     public function employe()
     {
         return $this->belongsTo(User::class, 'id_employe');
@@ -29,5 +36,18 @@ class AvanceSalaire extends Model
             ->whereMonth('mois_as', now()->month)
             ->whereYear('mois_as', now()->year)
             ->exists();
+    }
+
+    public function estEnAttente()
+    {
+        return $this->retrait_demande && !$this->retrait_valide;
+    }
+
+    /**
+     * Vérifie si l'avance a été validée
+     */
+    public function estValidee()
+    {
+        return $this->retrait_valide;
     }
 }

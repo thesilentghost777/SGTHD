@@ -19,4 +19,8 @@ class Prime extends Model
     {
         return $this->belongsTo(Employe::class, 'id_employe');
     }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_employe');
+    }
 }

@@ -11,25 +11,36 @@ use Carbon\Carbon;
 
 class StockController extends Controller
 {
+
     public function index()
     {
         $employe = auth()->user();
         if (!$employe) {
             return redirect()->route('login');
         }
+
         $nom = $employe->name;
         $role = $employe->role;
-        // Récupérer les stocks
-        $matieres = Matiere::orderBy('quantite', 'desc')->get();
-        $produits = ProduitRecu::select(
-            'produit',
-            'nom',
-            DB::raw('SUM(quantite) as quantite_totale'),
-            'prix'
-        )
-        ->groupBy('produit', 'nom', 'prix')
-        ->orderBy('quantite_totale', 'desc')
-        ->get();
+
+        // Récupérer les matières premières
+        $matieres = Matiere::where('nom', 'not like', 'Taule%')
+            ->orderBy('nom')
+            ->get();
+
+        // Récupérer les stocks de produits
+        $produits = DB::table('produit_stocks')
+            ->select(
+                'Produit_fixes.code_produit',
+                'Produit_fixes.nom',
+                'Produit_fixes.categorie',
+                'produit_stocks.quantite_en_stock as quantite_totale',
+                'produit_stocks.quantite_invendu',
+                'produit_stocks.quantite_avarie',
+                DB::raw('(SELECT prix FROM Produit_recu WHERE produit = Produit_fixes.code_produit ORDER BY date DESC LIMIT 1) as prix_recent')
+            )
+            ->join('Produit_fixes', 'produit_stocks.id_produit', '=', 'Produit_fixes.code_produit')
+            ->orderBy('quantite_en_stock', 'desc')
+            ->get();
 
         // Statistiques matières premières
         $matiere_max = $matieres->first();
@@ -42,18 +53,34 @@ class StockController extends Controller
         $produit_max = $produits->first();
         $total_produits = $produits->count();
         $valeur_stock_produits = $produits->sum(function($produit) {
-            return $produit->quantite_totale * $produit->prix;
+            return $produit->quantite_totale * ($produit->prix_recent ?? 0);
         });
 
-        // Données pour les graphiques
+        // Préparation des données pour les graphiques avec limitation aux top 10
+        $produits_for_chart = $produits->take(10);
+
         $data_matieres = [
-            'labels' => $matieres->pluck('nom'),
-            'data' => $matieres->pluck('quantite'),
+            'labels' => $matieres->take(10)->pluck('nom'),
+            'data' => $matieres->take(10)->pluck('quantite'),
         ];
 
         $data_produits = [
-            'labels' => $produits->pluck('nom'),
-            'data' => $produits->pluck('quantite_totale'),
+            'labels' => $produits_for_chart->pluck('nom'),
+            'data' => $produits_for_chart->pluck('quantite_totale'),
+        ];
+
+        // Ajout des statistiques supplémentaires
+        $stats = [
+            'produits_par_categorie' => $produits->groupBy('categorie')
+                ->map(function($group) {
+                    return [
+                        'quantite_totale' => $group->sum('quantite_totale'),
+                        'valeur_totale' => $group->sum(function($item) {
+                            return $item->quantite_totale * ($item->prix_recent ?? 0);
+                        }),
+                        'nombre_produits' => $group->count()
+                    ];
+                }),
         ];
 
         return view('stock.index', compact(
@@ -68,9 +95,54 @@ class StockController extends Controller
             'data_matieres',
             'data_produits',
             'nom',
-            'role'
+            'role',
+            'stats'
         ));
     }
+
+    public function adjustProduitQuantity(Request $request, $produit)
+    {
+        $validated = $request->validate([
+            'quantite' => 'required|numeric',
+            'operation' => 'required|in:add,subtract'
+        ]);
+
+        // Récupérer ou créer le stock du produit
+        $stock = ProduitStock::firstOrCreate(
+            ['id_produit' => $produit],
+            ['quantite_en_stock' => 0, 'quantite_invendu' => 0, 'quantite_avarie' => 0]
+        );
+
+        // Calculer la nouvelle quantité
+        $adjustmentQuantity = $validated['quantite'];
+        $newQuantity = $validated['operation'] === 'add'
+            ? $stock->quantite_en_stock + $adjustmentQuantity
+            : $stock->quantite_en_stock - $adjustmentQuantity;
+
+        if ($newQuantity < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stock insuffisant pour cette opération'
+            ], 422);
+        }
+
+        // Mettre à jour le stock
+        $stock->update(['quantite_en_stock' => $newQuantity]);
+
+        // Enregistrer le mouvement dans ProduitRecu pour l'historique
+        ProduitRecu::create([
+            'produit' => $produit,
+            'nom' => ProduitFixe::where('code_produit', $produit)->value('nom'),
+            'quantite' => $validated['operation'] === 'add' ? $adjustmentQuantity : -$adjustmentQuantity,
+            'date' => now(),
+            'prix' => ProduitRecu::where('produit', $produit)
+                ->orderBy('date', 'desc')
+                ->value('prix') ?? 0
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
 
     public function searchMatiere(Request $request)
     {
@@ -141,32 +213,6 @@ class StockController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function adjustProduitQuantity(Request $request, $produit)
-    {
-        $validated = $request->validate([
-            'quantite' => 'required|numeric',
-            'operation' => 'required|in:add,subtract'
-        ]);
-
-        $currentQuantity = ProduitRecu::where('produit', $produit)
-            ->sum('quantite');
-
-        $newQuantity = $validated['operation'] === 'add'
-            ? $currentQuantity + $validated['quantite']
-            : $currentQuantity - $validated['quantite'];
-
-        if ($newQuantity < 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'La quantité ne peut pas être négative'
-            ], 422);
-        }
-
-        ProduitRecu::where('produit', $produit)
-            ->update(['quantite' => $newQuantity]);
-
-        return response()->json(['success' => true]);
-    }
     public function updateProduit(Request $request, $produit)
     {
         $validated = $request->validate([

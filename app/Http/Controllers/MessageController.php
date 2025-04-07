@@ -6,10 +6,17 @@ use App\Models\Message;
 use Illuminate\Http\Request;
 use App\Models\ACouper;
 use App\Models\User;
+use App\Notifications\SignalementNotification;
+use Illuminate\Support\Facades\Log;
+use App\Traits\HistorisableActions;
+
+
 
 
 class MessageController extends Controller
 {
+    use HistorisableActions;
+
     public function message() {
         $employe = auth()->user();
         if (!$employe) {
@@ -34,9 +41,31 @@ class MessageController extends Controller
             'name' => $request->type != 'complaint-private' ? auth()->user()->name : 'null'
         ];
 
-        Message::create($messageData);
+        // Créer le message
+        $message = Message::create($messageData);
+        $user = auth()->user();
+        $this->historiser("L'utilisateur {$user->name} a créé un message de type {$messageData['type']}", 'create_message');
+        // Si c'est un signalement, envoyer une notification au DG
+        // Dans store_message()
+if ($messageData['type'] === 'report') {
+    // Récupérer l'utilisateur DG
+    $dg = User::getDG();
+    Log::info('Utilisateur DG trouvé : ' . ($dg ? 'Oui (ID: '.$dg->id.', Email: '.$dg->email.')' : 'Non'));
 
-        return view('dashboard');
+    // Envoyer la notification si le DG existe
+    if ($dg) {
+        try {
+            $dg->notify(new SignalementNotification($message));
+            Log::info('Notification envoyée avec succès à ' . $dg->email);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage());
+        }
+    } else {
+        Log::warning('Aucun utilisateur DG trouvé pour envoyer la notification');
+    }
+}
+
+        return redirect()->back()->with('success','message transmis avec succès');
     }
 
 

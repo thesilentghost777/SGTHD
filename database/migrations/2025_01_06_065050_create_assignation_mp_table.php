@@ -14,7 +14,7 @@ return new class extends Migration
         $table->foreignId('matiere_id')->constrained('Matiere');
         $table->decimal('quantite_assignee', 10, 3);
         $table->string('unite_assignee');
-        $table->decimal('quantite_restante', 10, 3)->default(0); // Valeur par défaut modifiée à 0
+        $table->decimal('quantite_restante', 10, 3);
         $table->timestamp('date_limite_utilisation')->nullable();
         $table->timestamps();
     });

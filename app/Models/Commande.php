@@ -21,8 +21,12 @@ class Commande extends Model {
         'date_commande' => 'datetime',
         'valider' => 'boolean'
     ];
+    public function produitRelation()
+    {
+        return $this->belongsTo(Produit_fixes::class, 'produit', 'code_produit');
+    }
 
-    public function produitFixe()
+    public function produit_fixe()
     {
         return $this->belongsTo(Produit_fixes::class, 'produit', 'code_produit');
     }

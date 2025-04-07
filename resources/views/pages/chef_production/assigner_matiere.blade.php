@@ -1,5 +1,6 @@
-@extends('layouts.app')
-@section('content')
+@extends('pages.chef_production.chef_production_default')
+
+@section('page-content')
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto">
         <h1 class="text-2xl font-bold mb-6">Assigner des Matières Premières</h1>

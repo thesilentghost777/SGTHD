@@ -30,7 +30,7 @@
         </div>
     @endif
 
-        <form action="{{ route('chef.commandes.store') }}" method="POST">
+        <form action="{{ route('chef.commandes.store2') }}" method="POST">
             @csrf
             <div class="space-y-4">
                 <!-- Champs de formulaire -->
@@ -62,12 +62,28 @@
                            value="{{ old('quantite') }}" required>
                 </div>
 
-                <div>
-                    <label for="date_commande" class="block text-sm font-medium text-gray-700">Date de commande</label>
-                    <input type="datetime-local" name="date_commande" id="date_commande"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                           value="{{ old('date_commande') }}" required>
-                </div>
+                <div class="flex items-end space-x-2">
+                    <div class="flex-grow">
+                      <label for="date_commande" class="block text-sm font-medium text-gray-700">Date de commande</label>
+                      <input type="datetime-local" name="date_commande" id="date_commande"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value="{{ old('date_commande') }}" required>
+                    </div>
+                    <button type="button"
+                      class="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 h-10"
+                      onclick="(function() {
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const hours = String(now.getHours()).padStart(2, '0');
+                        const minutes = String(now.getMinutes()).padStart(2, '0');
+                        const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+                        document.getElementById('date_commande').value = formattedDateTime;
+                      })();">
+                      Aujourd'hui
+                    </button>
+                  </div>
 
                 <div>
                     <label for="categorie" class="block text-sm font-medium text-gray-700">Catégorie</label>
@@ -75,8 +91,8 @@
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             required>
                         <option value="">Sélectionner une catégorie</option>
-                        <option value="patisserie" {{ old('categorie') == 'patisserie' ? 'selected' : '' }}>Patisserie</option>
-                        <option value="boulangerie" {{ old('categorie') == 'boulangerie' ? 'selected' : '' }}>Boulangerie</option>
+                        <option value="patissier" {{ old('categorie') == 'patisserie' ? 'selected' : '' }}>Patisserie</option>
+                        <option value="boulanger" {{ old('categorie') == 'boulangerie' ? 'selected' : '' }}>Boulangerie</option>
                     </select>
                 </div>
 
@@ -111,7 +127,7 @@
                 @foreach($commandes->sortByDesc('created_at') as $commande)
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap">{{ $commande->libelle }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">{{ $commande->produitFixe->nom ?? 'Produit non trouvé' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ $commande->produit_fixe->nom ?? 'Produit non trouvé' }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ $commande->quantite }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ $commande->date_commande }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ $commande->categorie }}</td>

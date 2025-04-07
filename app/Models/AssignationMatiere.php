@@ -13,6 +13,7 @@ class AssignationMatiere extends Model
         'producteur_id',
         'matiere_id',
         'quantite_assignee',
+        'quantite_restante',
         'unite_assignee',
         'utilisee',
         'date_limite_utilisation'
