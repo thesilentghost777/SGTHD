@@ -1,6 +1,6 @@
-@extends('layouts.app')
+@extends('pages.chef_production.chef_production_default')
 
-@section('content')
+@section('page-content')
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-lg p-6">
         <h1 class="text-2xl font-bold mb-6">Gestion des Matières Premières</h1>
@@ -11,8 +11,8 @@
                 <p><span class="font-medium">Unité minimale :</span> La plus petite unité de mesure utilisée pour cette matière (ex: grammes pour les solides, millilitres pour les liquides)</p>
                 <p><span class="font-medium">Unité classique :</span> L'unité de mesure standard pour l'achat en gros (ex: kg pour les solides, litre pour les liquides)</p>
                 <p><span class="font-medium">Quantité par unité :</span> Quantite de matieres en unites classique contenues dans une occurence de la matiere (ex: 50, donc dans 1 sac de farine il y'a 50 kg de farine)</p>
-                <p><span class="font-medium">Quantité :</span> Quantité totale d'unités classiques en stock (ex: nombre de kg ou de litres)</p>
-                <p><span class="font-medium">Prix unitaire :</span> Prix d'achat d'une unité classique en XAF (ex: prix d'un kg ou d'un litre)</p>
+                <p><span class="font-medium">Quantité :</span> Quantité totale d'unités(sacs,boites) en stock (ex: 10 sacs de farine en stock)</p>
+                <p><span class="font-medium">Prix unitaire :</span> Prix d'achat d'une unité en FCFA (ex: 25000 pour un bidon d'huile mayor)</p>
             </div>
             <div class="mt-6">
                 <h3 class="font-semibold mb-2">Exemples concrets :</h3>
@@ -354,7 +354,7 @@ function editMatiere(id) {
             document.getElementById('edit_unite_minimale').value = data.unite_minimale;
             document.getElementById('edit_unite_classique').value = data.unite_classique;
             document.getElementById('edit_quantite_par_unite').value = data.quantite_par_unite;
-            document.getElementById('edit_quantite').value = data.quantite;
+            document.getElementById('edit_quantite').value = Math.round(data.quantite); // Arrondi sans virgule
             document.getElementById('edit_prix_unitaire').value = data.prix_unitaire;
 
             // Mettre à jour l'action du formulaire

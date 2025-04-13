@@ -2,3 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] {
+    display: none !important;
+}
+
+.chart-container {
+    @apply relative;
+    min-height: 300px;
+}
+
+.progress-bar {
+    @apply overflow-hidden h-2 text-xs flex rounded bg-blue-200;
+}
+
+.progress-bar .progress {
+    @apply shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500;
+    transition: width 0.5s ease;
+}
+
+.stat-card {
+    @apply bg-white rounded-lg shadow p-6 transform transition-all duration-300 hover:scale-105;
+}
+
+.stat-card h3 {
+    @apply text-sm font-medium text-gray-500;
+}
+
+.stat-card p {
+    @apply mt-2 text-3xl font-semibold text-gray-900;
+}

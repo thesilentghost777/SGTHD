@@ -1,0 +1,1093 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Utilisation;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+class AdvancedProductionStatsService
+{
+    /**
+     * Vérifie si l'utilisateur est autorisé à accéder au lot
+     */
+    private function verifyLotAccess(string $lotId, int $userId): bool
+    {
+        return Utilisation::where('id_lot', $lotId)
+            ->where('producteur', $userId)
+            ->exists();
+    }
+
+    /**
+     * Get comprehensive production statistics
+     */
+    public function getStats($userId)
+    {
+        return [
+            'daily' => $this->getDailyStats($userId),
+            'monthly' => $this->getMonthlyStats($userId),
+            'yearly' => $this->getYearlyStats($userId),
+            'products' => $this->getDetailedProductStats($userId)
+        ];
+    }
+
+    /**
+     * Get detailed product statistics including materials
+     */
+    private function getDetailedProductStats($userId): Collection
+    {
+        // Première étape : identifier les productions uniques avec sécurité
+        $uniqueProductions = Utilisation::select(
+            'produit',
+            'producteur',
+            'id_lot',
+            DB::raw('DATE(created_at) as production_date'),
+            'quantite_produit'
+        )
+        ->where('producteur', $userId)
+        ->whereIn('id_lot', function($query) use ($userId) {
+            $query->select('id_lot')
+                  ->from('Utilisation')
+                  ->where('producteur', $userId)
+                  ->distinct();
+        })
+        ->groupBy('produit', 'producteur', 'id_lot', DB::raw('DATE(created_at)'), 'quantite_produit')
+        ->get();
+
+        return $uniqueProductions
+            ->groupBy('produit')
+            ->map(function ($productions) use ($userId) {
+                $firstProduction = $productions->first();
+
+                // Sécurise l'accès aux données du produit
+                $produit = Utilisation::where('produit', $firstProduction->produit)
+                    ->where('producteur', $userId)
+                    ->first()
+                    ->produitFixe;
+
+                $totalQuantity = $productions->sum('quantite_produit');
+                $revenue = $totalQuantity * $produit->prix;
+
+                // Récupérer les matières premières de manière sécurisée
+                $materials = collect();
+                foreach ($productions as $production) {
+                    if ($this->verifyLotAccess($production->id_lot, $userId)) {
+                        $productionMaterials = Utilisation::where([
+                            'produit' => $production->produit,
+                            'producteur' => $userId,
+                            'id_lot' => $production->id_lot,
+                            'quantite_produit' => $production->quantite_produit
+                        ])
+                        ->whereDate('created_at', $production->production_date)
+                        ->with('matiere')
+                        ->get();
+
+                        foreach ($productionMaterials as $material) {
+                            $existingMaterial = $materials->firstWhere('matiere_id', $material->matierep);
+
+                            if ($existingMaterial) {
+                                $existingMaterial['quantite_totale'] += $material->quantite_matiere;
+                                $existingMaterial['cout_total'] += $material->quantite_matiere * $material->matiere->prix_par_unite_minimale;
+                            } else {
+                                $materials->push([
+                                    'matiere_id' => $material->matierep,
+                                    'nom' => $material->matiere->nom,
+                                    'quantite_totale' => $material->quantite_matiere,
+                                    'unite' => $material->matiere->unite_minimale,
+                                    'cout_unitaire' => $material->matiere->prix_par_unite_minimale,
+                                    'cout_total' => $material->quantite_matiere * $material->matiere->prix_par_unite_minimale
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+                $totalCost = $materials->sum('cout_total');
+
+                return [
+                    'produit' => [
+                        'nom' => $produit->nom,
+                        'prix_unitaire' => $produit->prix,
+                        'quantite_totale' => $totalQuantity,
+                        'nombre_productions' => $productions->count(),
+                        'revenu_total' => $revenue
+                    ],
+                    'matieres_premieres' => $materials->values(),
+                    'cout_total_mp' => $totalCost,
+                    'benefice' => $revenue - $totalCost,
+                    'marge' => $revenue > 0 ? (($revenue - $totalCost) / $revenue) * 100 : 0
+                ];
+            });
+    }
+
+    /**
+     * Get daily production statistics
+     */
+    private function getDailyStats($userId): array
+    {
+        $days = collect(range(0, 6))->map(function ($day) {
+            return Carbon::now()->subDays($day)->format('Y-m-d');
+        });
+
+        $stats = Utilisation::select(
+                'produit',
+                'id_lot',
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(DISTINCT CONCAT(produit, id_lot, DATE(created_at))) as productions'),
+                DB::raw('SUM(DISTINCT quantite_produit) as total_quantity')
+            )
+            ->where('producteur', $userId)
+            ->whereIn(DB::raw('DATE(created_at)'), $days)
+            ->whereIn('id_lot', function($query) use ($userId) {
+                $query->select('id_lot')
+                      ->from('Utilisation')
+                      ->where('producteur', $userId)
+                      ->distinct();
+            })
+            ->groupBy('produit', 'id_lot', DB::raw('DATE(created_at)'))
+            ->get()
+            ->groupBy('date');
+
+        return [
+            'labels' => $days->map(fn($day) => Carbon::parse($day)->format('d/m')),
+            'quantities' => $days->map(function ($day) use ($stats) {
+                return $stats->get($day, collect())->sum('total_quantity');
+            })
+        ];
+    }
+
+    /**
+     * Get monthly production statistics
+     */
+    private function getMonthlyStats($userId): array
+    {
+        $months = collect(range(0, 11))->map(function ($month) {
+            return Carbon::now()->subMonths($month)->format('Y-m');
+        });
+
+        $stats = Utilisation::select(
+                'produit',
+                'id_lot',
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+                DB::raw('COUNT(DISTINCT CONCAT(produit, id_lot, DATE(created_at))) as productions'),
+                DB::raw('SUM(DISTINCT quantite_produit) as total_quantity')
+            )
+            ->where('producteur', $userId)
+            ->whereYear('created_at', '>=', Carbon::now()->subYear())
+            ->whereIn('id_lot', function($query) use ($userId) {
+                $query->select('id_lot')
+                      ->from('Utilisation')
+                      ->where('producteur', $userId)
+                      ->distinct();
+            })
+            ->groupBy('produit', 'id_lot', DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
+            ->get()
+            ->groupBy('month');
+
+        return [
+            'labels' => $months->map(fn($month) => Carbon::parse($month)->format('M Y')),
+            'quantities' => $months->map(function ($month) use ($stats) {
+                return $stats->get($month, collect())->sum('total_quantity');
+            })
+        ];
+    }
+
+    /**
+     * Get yearly production statistics
+     */
+    private function getYearlyStats($userId): array
+    {
+        $years = collect(range(0, 4))->map(function ($year) {
+            return Carbon::now()->subYears($year)->format('Y');
+        });
+
+        $stats = Utilisation::select(
+                'produit',
+                'id_lot',
+                DB::raw('YEAR(created_at) as year'),
+                DB::raw('COUNT(DISTINCT CONCAT(produit, id_lot, DATE(created_at))) as productions'),
+                DB::raw('SUM(DISTINCT quantite_produit) as total_quantity')
+            )
+            ->where('producteur', $userId)
+            ->whereYear('created_at', '>=', Carbon::now()->subYears(4))
+            ->whereIn('id_lot', function($query) use ($userId) {
+                $query->select('id_lot')
+                      ->from('Utilisation')
+                      ->where('producteur', $userId)
+                      ->distinct();
+            })
+            ->groupBy('produit', 'id_lot', DB::raw('YEAR(created_at)'))
+            ->get()
+            ->groupBy('year');
+
+        return [
+            'labels' => $years,
+            'quantities' => $years->map(function ($year) use ($stats) {
+                return $stats->get($year, collect())->sum('total_quantity');
+            })
+        ];
+    }
+}
+<?php
+
+namespace App\Services;
+
+class DayService
+{
+    private array $dayMap = [
+        'dimanche' => 0,
+        'lundi' => 1,
+        'mardi' => 2,
+        'mercredi' => 3,
+        'jeudi' => 4,
+        'vendredi' => 5,
+        'samedi' => 6,
+    ];
+
+    public function getDayNumber(string $day): int
+    {
+        return $this->dayMap[strtolower($day)] ?? 0;
+    }
+
+    public function getAllDays(): array
+    {
+        return array_keys($this->dayMap);
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Models\ACouper;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class DeductionsCalculator
+{
+    public function calculerDeductions(int $employeId, Carbon $mois): array
+    {
+        $deductions = DB::table('Acouper')
+            ->where('id_employe', $employeId)
+            ->whereYear('date', $mois->year)
+            ->whereMonth('date', $mois->month)
+            ->selectRaw('
+                COALESCE(SUM(manquants), 0) as total_manquants,
+                COALESCE(SUM(remboursement), 0) as total_remboursement,
+                COALESCE(SUM(pret), 0) as total_pret,
+                COALESCE(SUM(caisse_sociale), 0) as total_caisse_sociale
+            ')
+            ->first();
+
+        if (!$deductions) {
+            return [
+                'manquants' => 0,
+                'remboursement' => 0,
+                'pret' => 0,
+                'caisse_sociale' => 0
+            ];
+        }
+
+        return [
+            'manquants' => (int) $deductions->total_manquants,
+            'remboursement' => (int) $deductions->total_remboursement,
+            'pret' => (int) $deductions->total_pret,
+            'caisse_sociale' => (int) $deductions->total_caisse_sociale
+        ];
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Models\Utilisation;
+use Carbon\Carbon;
+
+class LotGeneratorService
+{
+    /**
+     * Génère un ID de lot unique
+     * Format: AAAAMMJJ-XXX où XXX est un numéro séquentiel
+     */
+    public function generateLotId(): string
+    {
+        $date = Carbon::now()->format('Ymd');
+
+        // Récupérer le dernier lot de la journée
+        $lastLot = Utilisation::where('id_lot', 'like', $date . '-%')
+            ->orderBy('id_lot', 'desc')
+            ->first();
+
+        if (!$lastLot) {
+            $sequence = '001';
+        } else {
+            // Extraire et incrémenter le numéro de séquence
+            $lastSequence = (int)substr($lastLot->id_lot, -3);
+            $sequence = str_pad($lastSequence + 1, 3, '0', STR_PAD_LEFT);
+        }
+
+        return $date . '-' . $sequence;
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Models\Utilisation;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+class LotSecurityService
+{
+    /**
+     * Vérifie si un lot est valide et appartient à l'utilisateur
+     */
+    public function verifyLotAccess(string $lotId, int $userId): bool
+    {
+        return Utilisation::where('id_lot', $lotId)
+            ->where('producteur', $userId)
+            ->exists();
+    }
+
+    /**
+     * Vérifie si un lot existe déjà
+     */
+    public function lotExists(string $lotId): bool
+    {
+        return Utilisation::where('id_lot', $lotId)->exists();
+    }
+
+    /**
+     * Génère un ID de lot unique
+     */
+    public function generateUniqueLotId(int $userId): string
+    {
+        $prefix = Carbon::now()->format('Ymd');
+        $unique = false;
+        $lotId = '';
+
+        while (!$unique) {
+            $lotId = $prefix . '-' . $userId . '-' . Str::random(4);
+            if (!$this->lotExists($lotId)) {
+                $unique = true;
+            }
+        }
+
+        return $lotId;
+    }
+
+    /**
+     * Valide le format de l'ID du lot
+     */
+    public function validateLotIdFormat(string $lotId): bool
+    {
+        return (bool) preg_match('/^\d{8}-\d+-[A-Za-z0-9]{4}$/', $lotId);
+    }
+
+    /**
+     * Vérifie si le lot est du même jour
+     */
+    public function isLotFromToday(string $lotId): bool
+    {
+        $lotDate = substr($lotId, 0, 8);
+        return $lotDate === Carbon::now()->format('Ymd');
+    }
+
+    /**
+     * Vérifie si le lot appartient à l'utilisateur et est de la bonne date
+     */
+    public function validateFullLotAccess(string $lotId, int $userId): bool
+    {
+        return $this->validateLotIdFormat($lotId) &&
+               $this->verifyLotAccess($lotId, $userId) &&
+               $this->isLotFromToday($lotId);
+    }
+}
+<?php
+namespace App\Services;
+
+use App\Models\Matiere;
+use App\Enums\UniteMinimale;
+use App\Enums\UniteClassique;
+
+class MatiereService
+{
+    public function calculerPrixParUniteMinimale(float $prix, float $quantite, string $uniteClassique, string $uniteMinimale): float
+    {
+        if ($quantite <= 0) return 0;
+
+        // Get base unit for the classical unit (ml for litre, g for kg)
+        $baseUnit = UniteClassique::getBaseUnit($uniteClassique);
+
+        // First convert to base unit
+        $quantiteEnBaseUnit = $quantite;
+        if ($uniteClassique === 'litre') {
+            $quantiteEnBaseUnit *= 1000; // 1 litre = 1000 ml
+        } elseif ($uniteClassique === 'kg') {
+            $quantiteEnBaseUnit *= 1000; // 1 kg = 1000 g
+        }
+
+        // Then convert from base unit to target minimal unit if needed
+        if ($baseUnit !== $uniteMinimale) {
+            $tauxConversion = UniteMinimale::getConversionRate($uniteMinimale, $baseUnit) ?: 1;
+            $quantiteEnBaseUnit = $quantiteEnBaseUnit / $tauxConversion;
+        }
+
+        return $prix / $quantiteEnBaseUnit;
+    }
+}
+<?php
+
+namespace App\Services;
+
+use Carbon\Carbon;
+use App\Models\Utilisation;
+use Illuminate\Support\Collection;
+
+class PerformanceService
+{
+    public function calculateMonthlyPerformance(int $employeId): array
+    {
+        $currentMonth = $this->getMonthStats($employeId, Carbon::now());
+        $lastMonth = $this->getMonthStats($employeId, Carbon::now()->subMonth());
+
+        return [
+            'evolution' => $this->calculateEvolution($currentMonth, $lastMonth),
+            'current_month' => $currentMonth,
+            'last_month' => $lastMonth
+        ];
+    }
+
+    private function getMonthStats(int $employeId, Carbon $date): array
+    {
+        $productions = Utilisation::where('producteur', $employeId)
+            ->whereYear('created_at', $date->year)
+            ->whereMonth('created_at', $date->month)
+            ->get()
+            ->groupBy('id_lot');
+
+        return [
+            'total_lots' => $productions->count(),
+            'total_quantity' => $productions->sum(function ($lot) {
+                return $lot->first()->quantite_produit;
+            }),
+            'average_per_lot' => $productions->avg(function ($lot) {
+                return $lot->first()->quantite_produit;
+            })
+        ];
+    }
+
+    private function calculateEvolution(array $current, array $last): array
+    {
+        return [
+            'lots' => $this->calculatePercentageChange($current['total_lots'], $last['total_lots']),
+            'quantity' => $this->calculatePercentageChange($current['total_quantity'], $last['total_quantity']),
+            'efficiency' => $this->calculatePercentageChange($current['average_per_lot'], $last['average_per_lot'])
+        ];
+    }
+
+    private function calculatePercentageChange($current, $previous): float
+    {
+        if ($previous == 0) return 0;
+        return (($current - $previous) / $previous) * 100;
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Models\Utilisation;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use App\Services\ProductionStatsService;
+class ProducteurComparisonService
+{
+    private $productionStatsService;
+
+    public function __construct(ProductionStatsService $productionStatsService)
+    {
+        $this->productionStatsService = $productionStatsService;
+    }
+
+    public function compareProducteurs(string $critere, string $periode, ?string $dateDebut = null, ?string $dateFin = null): Collection
+{
+    // Modifier cette ligne pour inclure les rôles patissier et boulanger
+    $producteurs = User::whereIn('role', ['patissier', 'boulanger'])->get();
+
+    $comparaisons = collect();
+
+    foreach ($producteurs as $producteur) {
+        $stats = $this->getProducteurStats($producteur->id, $periode, $dateDebut, $dateFin);
+        $comparaisons->push([
+            'id' => $producteur->id,
+            'nom' => $producteur->name,
+            'secteur' => $producteur->secteur,
+            'stats' => $stats
+        ]);
+    }
+
+    return $this->trierParCritere($comparaisons, $critere);
+}
+
+    private function getProducteurStats(int $producteurId, string $periode, ?string $dateDebut, ?string $dateFin): array
+    {
+        $query = Utilisation::with(['produitFixe', 'matiere'])
+            ->where('producteur', $producteurId);
+
+        // Appliquer le filtre de période
+        switch ($periode) {
+            case 'jour':
+                $query->whereDate('created_at', Carbon::today());
+                break;
+            case 'semaine':
+                $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                break;
+            case 'mois':
+                $query->whereMonth('created_at', Carbon::now()->month)
+                    ->whereYear('created_at', Carbon::now()->year);
+                break;
+            case 'personnalise':
+                if ($dateDebut && $dateFin) {
+                    $query->whereBetween('created_at', [$dateDebut, $dateFin]);
+                }
+                break;
+        }
+
+        $productions = $query->get();
+
+        // Calculer les statistiques
+        $quantite_totale = $productions->sum('quantite_produit');
+        $cout_total = $this->calculerCoutTotal($productions);
+        $revenu_total = $this->calculerRevenuTotal($productions);
+        $benefice = $revenu_total - $cout_total;
+        $nombre_produits = $productions->groupBy('produit')->count();
+        $efficacite = $quantite_totale > 0 ? ($benefice / $quantite_totale) : 0;
+
+        return [
+            'quantite_totale' => $quantite_totale,
+            'cout_total' => $cout_total,
+            'revenu_total' => $revenu_total,
+            'benefice' => $benefice,
+            'nombre_produits' => $nombre_produits,
+            'efficacite' => $efficacite,
+            'moyenne_journaliere' => $this->calculerMoyenneJournaliere($productions)
+        ];
+    }
+
+    private function calculerCoutTotal(Collection $productions): float
+    {
+        return $productions->sum(function ($production) {
+            return $production->quantite_matiere * $production->matiere->prix_par_unite_minimale;
+        });
+    }
+
+    private function calculerRevenuTotal(Collection $productions): float
+    {
+        return $productions->sum(function ($production) {
+            return $production->quantite_produit * $production->produitFixe->prix;
+        });
+    }
+
+    private function calculerMoyenneJournaliere(Collection $productions): float
+    {
+        if ($productions->isEmpty()) return 0;
+
+        $jours_production = $productions->groupBy(function ($production) {
+            return $production->created_at->format('Y-m-d');
+        })->count();
+
+        return $jours_production > 0 ? $productions->sum('quantite_produit') / $jours_production : 0;
+    }
+
+    private function trierParCritere(Collection $comparaisons, string $critere): Collection
+    {
+        return $comparaisons->sortByDesc(function ($item) use ($critere) {
+            switch ($critere) {
+                case 'quantite':
+                    return $item['stats']['quantite_totale'];
+                case 'benefice':
+                    return $item['stats']['benefice'];
+                case 'efficacite':
+                    return $item['stats']['efficacite'];
+                case 'diversite':
+                    return $item['stats']['nombre_produits'];
+                default:
+                    return $item['stats']['benefice'];
+            }
+        })->values();
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Models\Utilisation;
+use App\Models\Produit_fixes;
+use App\Models\Daily_assignments;
+use App\Models\Production_suggerer_par_jour;
+use App\Models\MatiereRecommander;
+use Illuminate\Support\Collection;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class ProductionService
+{
+    public function getTodayProductions(int $employeId): Collection
+    {
+        $productIds = $this->getTodayProductIds($employeId);
+        $produits = Produit_fixes::whereIn('code_produit', $productIds)->get();
+        $utilisations = $this->getTodayUtilisations($employeId, $productIds);
+
+        return $this->buildProductionsCollection($produits, $utilisations);
+    }
+
+    public function getExpectedProductions(int $employeId): Collection
+    {
+        $assignments = Daily_assignments::where('producteur', $employeId)
+        ->whereDate('assignment_date', now())
+        ->get();
+        return $this->buildExpectedProductionsCollection($assignments, $employeId);
+    }
+
+    public function getRecommendedProductions(): Collection
+    {
+        $jour_actuel = strtolower(Carbon::now()->locale('fr')->dayName);
+        $suggestions = Production_suggerer_par_jour::where('day', $jour_actuel)->get();
+
+        return $this->buildRecommendedProductionsCollection($suggestions);
+    }
+
+    private function getTodayProductIds(int $employeId): array
+    {
+        return Utilisation::where('producteur', $employeId)
+            ->whereDate('created_at', Carbon::now()->toDateString())
+            ->select('produit')
+            ->groupBy('produit')
+            ->pluck('produit')
+            ->toArray();
+    }
+
+    private function getTodayUtilisations(int $employeId, array $productIds): Collection
+    {
+        return Utilisation::with('matiere')
+            ->select(
+                'produit',
+                'matierep',
+                'producteur',
+                'quantite_produit',
+                'quantite_matiere',
+                'unite_matiere',
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") as production_timestamp')
+            )
+            ->whereIn('produit', $productIds)
+            ->where('producteur', $employeId)
+            ->whereDate('created_at', Carbon::now()->toDateString())
+            ->get();
+    }
+
+    private function buildProductionsCollection(Collection $produits, Collection $utilisations): Collection
+    {
+        $productions = collect();
+
+        foreach ($produits as $produit) {
+            $productUtilisations = $utilisations->where('produit', $produit->code_produit);
+
+            // Identifier les productions uniques par timestamp
+            $uniqueProductions = $productUtilisations
+                ->groupBy('production_timestamp')
+                ->map(function ($group) {
+                    return [
+                        'quantite' => $group->first()->quantite_produit,
+                        'matieres' => $group
+                    ];
+                });
+
+            $quantite_totale = $uniqueProductions->sum('quantite');
+
+            if ($quantite_totale > 0) {
+                // Agréger les matières premières de toutes les productions
+                $matieres_utilisees = [];
+
+                foreach ($uniqueProductions as $production) {
+                    foreach ($production['matieres'] as $utilisation) {
+                        $matiere_key = $utilisation->matierep;
+
+                        if (!isset($matieres_utilisees[$matiere_key])) {
+                            $matieres_utilisees[$matiere_key] = [
+                                'nom' => $utilisation->matiere->nom,
+                                'quantite' => 0,
+                                'unite' => $utilisation->unite_matiere
+                            ];
+                        }
+
+                        $matieres_utilisees[$matiere_key]['quantite'] += $utilisation->quantite_matiere;
+                    }
+                }
+
+                $productions->push([
+                    'nom' => $produit->nom,
+                    'prix' => $produit->prix,
+                    'quantite' => $quantite_totale,
+                    'nombre_productions' => $uniqueProductions->count(),
+                    'matieres_premieres' => collect($matieres_utilisees)->values()
+                ]);
+            }
+        }
+
+        return $productions;
+    }
+
+    private function buildExpectedProductionsCollection(Collection $assignments, int $employeId): Collection
+    {
+        $productions = collect();
+
+        foreach ($assignments as $assignment) {
+            $produit = Produit_fixes::where('code_produit', $assignment->produit)->first();
+            if ($produit) {
+                $productionStats = $this->getTodayProductionStats($employeId, $assignment->produit);
+                $quantite_produite = $productionStats['quantite_totale'];
+
+                if ($quantite_produite >= $assignment->expected_quantity) {
+                    $assignment->status = 1;
+                    $assignment->save();
+                }
+
+                $productions->push([
+                    'nom' => $produit->nom,
+                    'quantite_attendue' => $assignment->expected_quantity,
+                    'quantite_produite' => $quantite_produite,
+                    'nombre_productions' => $productionStats['nombre_productions'],
+                    'prix' => $produit->prix,
+                    'status' => $assignment->status == 1 ? "Terminé" : "En attente",
+                    'progression' => min(($quantite_produite / $assignment->expected_quantity) * 100, 100)
+                ]);
+            }
+        }
+
+        return $productions;
+    }
+
+    private function buildRecommendedProductionsCollection(Collection $suggestions): Collection
+    {
+        return $suggestions->map(function ($suggestion) {
+            $produit = Produit_fixes::where('code_produit', $suggestion->produit)->first();
+            if ($produit) {
+                return [
+                    'nom' => $produit->nom,
+                    'quantite_recommandee' => $suggestion->quantity,
+                    'prix' => $produit->prix
+                ];
+            }
+        })->filter();
+    }
+
+    private function getTodayProductionStats(int $employeId, string $produitId): array
+    {
+        $productions = Utilisation::where('producteur', $employeId)
+            ->where('produit', $produitId)
+            ->whereDate('created_at', Carbon::now()->toDateString())
+            ->select(
+                'quantite_produit',
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") as production_timestamp')
+            )
+            ->get()
+            ->groupBy('production_timestamp');
+
+        return [
+            'quantite_totale' => $productions->sum(function ($group) {
+                return $group->first()->quantite_produit;
+            }),
+            'nombre_productions' => $productions->count()
+        ];
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Models\Utilisation;
+use Illuminate\Support\Collection;
+use Carbon\Carbon;
+
+class ProductionStatsService
+{
+    /**
+     * Récupère les productions par lot pour un utilisateur donné dans une plage de dates.
+     *
+     * @param int $userId
+     * @param Carbon $debut
+     * @param Carbon $fin
+     * @return Collection
+     */
+    public function getProductionsByLot(int $userId, Carbon $debut, Carbon $fin): Collection
+    {
+        return Utilisation::where('producteur', $userId)
+            ->whereBetween('created_at', [$debut, $fin])
+            ->get()
+            ->groupBy('id_lot'); // Groupement par lot
+    }
+
+    /**
+     * Calcule les statistiques globales des productions par lot.
+     *
+     * @param Collection $productionsByLot
+     * @return array
+     */
+    public function calculateGlobalStats(Collection $productionsByLot): array
+    {
+        $globalStats = [
+            'total_quantite' => 0,
+            'total_revenu' => 0,
+            'total_cout' => 0,
+            'total_benefice' => 0,
+            'lots' => []
+        ];
+
+        foreach ($productionsByLot as $idLot => $productions) {
+            $lotStats = $this->calculateProductStats($productions);
+
+            $globalStats['total_quantite'] += $lotStats['quantite_totale'];
+            $globalStats['total_revenu'] += $lotStats['revenu_total'];
+            $globalStats['total_cout'] += $lotStats['cout_total'];
+            $globalStats['total_benefice'] += $lotStats['benefice'];
+            $globalStats['lots'][$idLot] = $lotStats;
+        }
+
+        return $globalStats;
+    }
+
+    /**
+     * Calcule les statistiques pour un lot donné en regroupant les produits.
+     *
+     * @param Collection $productions
+     * @return array
+     */
+    private function calculateProductStats(Collection $productions): array
+    {
+        $statsParProduit = $productions->groupBy('produit')
+            ->map(function ($groupedProductions) {
+                $produit = $groupedProductions->first()->produitFixe;
+
+                $quantiteTotale = $groupedProductions->sum('quantite_produit');
+                $coutTotal = $groupedProductions->sum(function ($production) {
+                    $quantiteConvertie = app('UniteConversionService')->convertToMinimalUnit(
+                        $production->quantite_matiere,
+                        $production->unite_matiere,
+                        $production->matiere->unite_minimale
+                    );
+                    return $quantiteConvertie * $production->matiere->prix_par_unite_minimale;
+                });
+
+                $revenuTotal = $quantiteTotale * $produit->prix;
+                $benefice = $revenuTotal - $coutTotal;
+
+                return [
+                    'nom_produit' => $produit->nom,
+                    'code_produit' => $produit->code_produit,
+                    'quantite_totale' => $quantiteTotale,
+                    'cout_total' => $coutTotal,
+                    'revenu_total' => $revenuTotal,
+                    'benefice' => $benefice,
+                ];
+            });
+
+        return [
+            'quantite_totale' => $statsParProduit->sum('quantite_totale'),
+            'cout_total' => $statsParProduit->sum('cout_total'),
+            'revenu_total' => $statsParProduit->sum('revenu_total'),
+            'benefice' => $statsParProduit->sum('benefice'),
+            'stats_par_produit' => $statsParProduit->values()->toArray(),
+        ];
+    }
+}
+<?php
+
+namespace App\Services;
+
+class RecipeCalculatorService
+{
+    public function calculateIngredientsForQuantity(float $baseQuantity, float $targetQuantity, float $ingredientQuantity): float
+    {
+        return ($targetQuantity * $ingredientQuantity) / $baseQuantity;
+    }
+
+    public function calculateAllIngredientsForRecipe(array $recipe, float $targetQuantity): array
+    {
+        $baseQuantity = $recipe['quantitep'];
+        $ingredients = [];
+
+        foreach ($recipe['ingredients'] as $ingredient) {
+            $newQuantity = $this->calculateIngredientsForQuantity(
+                $baseQuantity,
+                $targetQuantity,
+                $ingredient['quantite']
+            );
+
+            $ingredients[] = [
+                'nom' => $ingredient['nom'],
+                'quantite' => $newQuantity,
+                'unite' => $ingredient['unite']
+            ];
+        }
+
+        return $ingredients;
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Models\Salaire;
+use App\Models\AvanceSalaire;
+use Carbon\Carbon;
+
+class SalaireCalculator
+{
+    private $deductionsCalculator;
+
+    public function __construct(DeductionsCalculator $deductionsCalculator)
+    {
+        $this->deductionsCalculator = $deductionsCalculator;
+    }
+
+    public function calculerFichePaie(User $employe, Carbon $mois): array
+    {
+        $salaire = Salaire::where('id_employe', $employe->id)->first();
+        $avanceSalaire = AvanceSalaire::where('id_employe', $employe->id)
+            ->whereMonth('mois_as', $mois->month)
+            ->whereYear('mois_as', $mois->year)
+            ->first();
+
+        $deductions = $this->deductionsCalculator->calculerDeductions($employe->id, $mois);
+
+        $salaireBase = $salaire?->somme ?? 0;
+        $montantAvance = $avanceSalaire?->sommeAs ?? 0;
+
+        $salaireNet = $salaireBase;
+        $salaireNet -= $montantAvance;
+        $salaireNet -= $deductions['manquants'];
+        $salaireNet -= $deductions['remboursement'];
+        $salaireNet -= $deductions['caisse_sociale'];
+
+        return [
+            'salaire_base' => $salaireBase,
+            'avance_salaire' => $montantAvance,
+            'manquants' => $deductions['manquants'],
+            'remboursement' => $deductions['remboursement'],
+            'pret' => $deductions['pret'], // Gardé pour affichage informatif uniquement
+            'caisse_sociale' => $deductions['caisse_sociale'],
+            'salaire_net' => $salaireNet
+        ];
+    }
+}
+<?php
+
+namespace App\Services;
+
+class UnitConverter {
+    private static $conversionRules = [
+        'g' => ['unit' => 'kg', 'factor' => 0.001],
+        'kg' => ['unit' => 'kg', 'factor' => 1],
+        'ml' => ['unit' => 'litre', 'factor' => 0.001],
+        'cl' => ['unit' => 'litre', 'factor' => 0.01],
+        'dl' => ['unit' => 'litre', 'factor' => 0.1],
+        'l' => ['unit' => 'litre', 'factor' => 1],
+        'cc' => ['unit' => 'litre', 'factor' => 0.001],
+        'cs' => ['unit' => 'litre', 'factor' => 0.015],
+        'pincee' => ['unit' => 'kg', 'factor' => 0.001],
+        'unite' => ['unit' => 'unité', 'factor' => 1]
+    ];
+
+    public static function convert($value, $unit) {
+        if (!isset(self::$conversionRules[$unit])) {
+            return [$value, $unit];
+        }
+
+        $rule = self::$conversionRules[$unit];
+        $convertedValue = $value * $rule['factor'];
+
+        // Formatage intelligent
+        if ($convertedValue < 0.001) {
+            return [($value), $unit];
+        } elseif ($convertedValue < 1) {
+            return [($convertedValue * 1000), mb_substr($rule['unit'], 0, 1) . 'g'];
+        } else {
+            return [($convertedValue), $rule['unit']];
+        }
+    }
+}
+<?php
+
+namespace App\Services;
+
+use App\Enums\UniteMinimale;
+
+class UniteConversionService
+{
+    private array $conversions = [
+        'kg' => ['base' => 'g', 'facteur' => 1000],
+        'g' => ['base' => 'g', 'facteur' => 1],
+        'l' => ['base' => 'ml', 'facteur' => 1000],
+        'dl' => ['base' => 'ml', 'facteur' => 100],
+        'cl' => ['base' => 'ml', 'facteur' => 10],
+        'ml' => ['base' => 'ml', 'facteur' => 1],
+        'cc' => ['base' => 'ml', 'facteur' => 5],
+        'cs' => ['base' => 'ml', 'facteur' => 15],
+        'pincee' => ['base' => 'g', 'facteur' => 1.5],
+        'unite' => ['base' => 'unite', 'facteur' => 1]
+    ];
+
+    public function convertir(float $quantite, $uniteSource, $uniteCible): float
+    {
+        // Convertir les unités en objets d'énumération si ce sont des chaînes
+        if (is_string($uniteSource)) {
+            $uniteSource = UniteMinimale::from($uniteSource);
+        }
+
+        if (is_string($uniteCible)) {
+            $uniteCible = UniteMinimale::from($uniteCible);
+        }
+
+        // Convertir en chaînes (valeurs des énumérations) pour utilisation dans le tableau de conversion
+        $uniteSourceString = $uniteSource->value;
+        $uniteCibleString = $uniteCible->value;
+
+        // Vérification si les unités existent dans les conversions
+        if (!isset($this->conversions[$uniteSourceString]) || !isset($this->conversions[$uniteCibleString])) {
+            throw new \InvalidArgumentException("Les unités spécifiées ne sont pas reconnues.");
+        }
+
+        // Si les unités sont identiques, aucune conversion n'est nécessaire
+        if ($uniteSourceString === $uniteCibleString) {
+            return $quantite;
+        }
+
+        // Conversion en unité de base
+        $quantiteBase = $quantite * $this->conversions[$uniteSourceString]['facteur'];
+
+        // Vérification de la compatibilité des bases
+        if ($this->conversions[$uniteSourceString]['base'] !== $this->conversions[$uniteCibleString]['base']) {
+            throw new \InvalidArgumentException("Les unités source et cible ne sont pas compatibles.");
+        }
+
+        // Conversion de l'unité de base vers l'unité cible
+        return $quantiteBase / $this->conversions[$uniteCibleString]['facteur'];
+    }
+    public function obtenirConversions(): array
+{
+    return $this->conversions;
+}
+
+}
+#!/bin/bash
+path="./"
+
+# Parcours tous les fichiers du répertoire
+for file in "$path"/* ; do
+    # Vérifie si c'est un fichier régulier
+    if [ -f "$file" ]; then
+        cat "$file" >> requirements.txt
+    fi
+done

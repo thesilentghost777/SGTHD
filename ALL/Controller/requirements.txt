@@ -1,0 +1,3796 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class AlimentationController extends Controller
+{
+    public function dashboard() {
+        return view('pages/alimentation/alimentation_dashboard');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use App\Models\Matiere;
+use App\Models\AssignationMatiere;
+use App\Services\UniteConversionService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class AssignationMatiereController extends Controller
+{
+    protected $uniteConversionService;
+
+    public function __construct(UniteConversionService $uniteConversionService)
+    {
+        $this->uniteConversionService = $uniteConversionService;
+    }
+
+    public function index()
+    {
+        $assignations = AssignationMatiere::where('producteur_id', Auth::id())
+            ->whereNot('quantite_restante', 0)
+            ->with(['matiere'])
+            ->get();
+
+        return view('pages.producteur.mes_assignations', compact('assignations'));
+    }
+
+    public function create()
+    {
+        $nom = auth()->user()->name;
+        $role = auth()->user()->role;
+        $producteurs = User::whereIn('role', ['patissier', 'boulanger'])->get();
+        $matieres = Matiere::all();
+        $assignations = AssignationMatiere::with(['producteur', 'matiere'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return view('pages.chef_production.assigner_matiere', compact('producteurs', 'matieres','assignations','nom','role'));
+    }
+
+    public function storeassignation(Request $request)
+    {
+        $request->validate([
+            'producteur_id' => 'required|exists:users,id',
+            'matiere_id' => 'required|exists:Matiere,id',
+            'quantite_assignee' => 'required|numeric|min:0.001',
+            'unite_assignee' => 'required|string',
+            'date_limite_utilisation' => 'required|date'
+        ]);
+
+        // Vérifier le stock disponible
+        $matiere = Matiere::findOrFail($request->matiere_id);
+        if ($matiere->quantite*$matiere->quantite_par_unite < $request->quantite_assignee) {
+            return back()->withErrors(['message' => 'Stock insuffisant pour cette assignation.']);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Créer l'assignation
+            AssignationMatiere::create([
+                'producteur_id' => $request->producteur_id,
+                'matiere_id' => $request->matiere_id,
+                'quantite_assignee' => $request->quantite_assignee,
+                'quantite_restante' => $request->quantite_assignee,
+                'unite_assignee' => $request->unite_assignee,
+                'date_limite_utilisation' => $request->date_limite_utilisation
+            ]);
+
+            // Mettre à jour le stock
+            /*converti dabord en unite classique*/ //revoir cette section pour que la convertion reussisse
+            $qte_converti = $this->uniteConversionService->convertir(
+                $request->quantite_assignee,
+                $request->unite_assignee,
+                $matiere->unite_classique
+            );
+            // Mettre à jour le stock
+            $qte_representer = $qte_converti / $matiere->quantite_par_unite;
+            $matiere->quantite -= $qte_representer ;
+            $matiere->save();
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Assignation créée avec succès.');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->withErrors(['message' => 'Une erreur est survenue lors de l\'assignation.']);
+        }
+    }
+
+    public function update(Request $request, AssignationMatiere $assignation)
+    {
+        $request->validate([
+            'quantite_assignee' => 'required|numeric|min:0.001',
+            'unite_assignee' => 'required|string',
+            'date_limite_utilisation' => 'required|date'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Calculer la différence de quantité
+            $difference = $request->quantite_assignee - $assignation->quantite_assignee;
+
+
+            // Vérifier le stock si on augmente la quantité
+            if ($difference > 0) {
+                $matiere = Matiere::findOrFail($assignation->matiere_id);
+                if ($matiere->quantite < $difference) {
+                    return back()->withErrors(['message' => 'Stock insuffisant pour cette modification.']);
+                }
+                $matiere->quantite -= $difference;
+                $matiere->save();
+            } elseif ($difference < 0) {
+                // Remettre la différence en stock
+                $matiere = Matiere::findOrFail($assignation->matiere_id);
+                $matiere->quantite += abs($difference);
+                $matiere->save();
+            }
+
+            // Mettre à jour l'assignation
+            $assignation->update([
+                'quantite_assignee' => $request->quantite_assignee,
+                'quantite_restante' => $request->quantite_assignee,
+                'unite_assignee' => $request->unite_assignee,
+                'date_limite_utilisation' => $request->date_limite_utilisation
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Assignation mise à jour avec succès.');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->withErrors(['message' => 'Une erreur est survenue lors de la mise à jour.']);
+        }
+    }
+
+    public function destroy(AssignationMatiere $assignation)
+    {
+        DB::beginTransaction();
+        try {
+            // Remettre la quantité en stock
+            $matiere = Matiere::findOrFail($assignation->matiere_id);
+            $matiere->quantite += $assignation->quantite_restante;
+            $matiere->save();
+
+            // Supprimer l'assignation
+            $assignation->delete();
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Assignation supprimée avec succès.');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->withErrors(['message' => 'Une erreur est survenue lors de la suppression.']);
+        }
+    }
+
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Bag;
+use App\Models\BagTransaction;
+use Illuminate\Http\Request;
+
+class BagController extends Controller
+{
+    public function index()
+    {
+        $nom = auth()->user()->name;
+        $bags = Bag::all();
+        return view('bags.index', compact('bags','nom'));
+    }
+
+    public function create()
+    {
+        return view('bags.create');
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'stock_quantity' => 'required|integer|min:0',
+            'alert_threshold' => 'required|integer|min:0'
+        ]);
+
+        Bag::create($validated);
+
+        return redirect()->route('bags.index')
+            ->with('success', 'Sac créé avec succès.');
+    }
+
+    public function receive()
+    {
+        $nom = auth()->user()->name;
+        $bags = Bag::all();
+        return view('bags.receive', compact('bags','nom'));
+    }
+
+    public function storeReceived(Request $request)
+    {
+        $validated = $request->validate([
+            'bag_id' => 'required|exists:bags,id',
+            'quantity' => 'required|integer|min:1',
+            'transaction_date' => 'required|date'
+        ]);
+
+        $bag = Bag::findOrFail($validated['bag_id']);
+
+        BagTransaction::create([
+            'bag_id' => $validated['bag_id'],
+            'type' => 'received',
+            'quantity' => $validated['quantity'],
+            'transaction_date' => $validated['transaction_date']
+        ]);
+
+        $bag->increment('stock_quantity', $validated['quantity']);
+
+        return redirect()->route('bags.receive')
+            ->with('success', 'Réception enregistrée avec succès.');
+    }
+
+    public function sell()
+    {
+        $nom = auth()->user()->name;
+        $bags = Bag::all();
+        return view('bags.sell', compact('bags','nom'));
+    }
+
+    public function storeSold(Request $request)
+    {
+        $validated = $request->validate([
+            'bag_id' => 'required|exists:bags,id',
+            'quantity' => 'required|integer|min:1',
+            'transaction_date' => 'required|date'
+        ]);
+
+        $bag = Bag::findOrFail($validated['bag_id']);
+
+        if ($bag->stock_quantity < $validated['quantity']) {
+            return back()->withErrors(['quantity' => 'Stock insuffisant.']);
+        }
+
+        BagTransaction::create([
+            'bag_id' => $validated['bag_id'],
+            'type' => 'sold',
+            'quantity' => $validated['quantity'],
+            'transaction_date' => $validated['transaction_date']
+        ]);
+
+        $bag->decrement('stock_quantity', $validated['quantity']);
+
+        return redirect()->route('bags.sell')
+            ->with('success', 'Vente enregistrée avec succès.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Produit_fixes;
+use App\Models\Matiere;
+use App\Models\MatiereRecommander;
+use App\Enums\UniteMinimale;
+use App\Enums\UniteClassique;
+use App\Http\Requests\MatierePremRequest;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use App\Models\Commande;
+use App\Models\Utilisation;
+use App\Models\User;
+use App\Models\Daily_assignments;
+use App\Models\AssignationsMatiere;
+use Carbon\Carbon;
+use App\Models\ACouper;
+
+class Chef_productionController extends Controller
+{
+
+    public function gestionProduits()
+    {
+        $employe = Auth::user();
+        $nom = $employe->name;
+        $role = $employe->role;
+        $produits = Produit_fixes::orderBy('created_at', 'desc')->paginate(10);
+        return view('pages.chef_production.gestion_produits', compact('produits','nom','role'));
+    }
+
+    public function storeProduit(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'nom' => 'required|string|max:50',
+                'prix' => 'required|numeric|min:0',
+                'categorie' => 'required|string|in:boulangerie,patisserie'
+            ]);
+
+            DB::beginTransaction();
+
+            $produit = Produit_fixes::create($validated);
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Produit ajouté avec succès');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            Log::error('Erreur de validation: ' . json_encode($e->errors()));
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erreur lors de l\'ajout du produit: ' . $e->getMessage());
+            return redirect()->back()
+                ->withErrors(['error' => 'Erreur lors de l\'ajout du produit: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+    public function updateProduit(Request $request, $code_produit)
+    {
+        try {
+            $validated = $request->validate([
+                'nom' => 'required|string|max:50',
+                'prix' => 'required|numeric|min:0',
+                'categorie' => 'required|string|in:boulangerie,patisserie'
+            ]);
+
+            DB::beginTransaction();
+
+            $produit = Produit_fixes::where('code_produit', $code_produit)->firstOrFail();
+            $produit->update($validated);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Produit mis à jour avec succès'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erreur lors de la mise à jour: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function destroyProduit($code_produit)
+    {
+        try {
+            DB::beginTransaction();
+
+            $produit = Produit_fixes::where('code_produit', $code_produit)->firstOrFail();
+
+            // Vérifier les relations
+            if ($produit->utilisations()->exists() ||
+                DB::table('Commande')->where('produit', $code_produit)->exists()) {
+                throw new \Exception(
+                    "Impossible de supprimer le produit « {$produit->nom} » car il est actuellement " .
+                    "utilisé dans des commandes ou des productions en cours. " .
+                    "Veuillez d'abord supprimer toutes les références à ce produit avant de le supprimer."
+                );
+            }
+
+            $produit->delete();
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Produit supprimé avec succès'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erreur lors de la suppression: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+
+    // Gestion des Matières Premières
+    public function gestionMatieres()
+    {
+        $employe = Auth::user();
+        $nom = $employe->name;
+        $role = $employe->role;
+        $matieres = Matiere::orderBy('created_at', 'desc')->paginate(10);
+        $unites_minimales = UniteMinimale::values();
+        $unites_classiques = UniteClassique::values();
+
+        return view('pages.chef_production.gestion_matieres', compact('matieres', 'unites_minimales', 'unites_classiques','nom','role'));
+    }
+
+    public function storeMatiere(MatierePremRequest $request)
+    {
+        try {
+            DB::beginTransaction();
+            // Validation supplémentaire des unités compatibles
+            $unites_permises = UniteMinimale::getUniteClassiquePermise($request->unite_minimale);
+            if (!in_array($request->unite_classique, $unites_permises)) {
+                return redirect()->back()->withErrors(['error' => 'Combinaison d\'unités invalide']);
+            }
+            Matiere::create($request->validated());
+            DB::commit();
+            return redirect()->back()->with('success', 'Matière première ajoutée avec succès');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Erreur lors de l\'ajout: ' . $e->getMessage()]);
+        }
+    }
+
+    public function editMatiere($id)
+{
+    try {
+        $matiere = Matiere::findOrFail($id);
+        return response()->json($matiere);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Matière première non trouvée'], 404);
+    }
+}
+
+public function updateMatiere(MatierePremRequest $request, Matiere $matiere)
+{
+    try {
+        DB::beginTransaction();
+
+        // Validation supplémentaire des unités compatibles
+        $unites_permises = UniteMinimale::getUniteClassiquePermise($request->unite_minimale);
+        if (!in_array($request->unite_classique, $unites_permises)) {
+            return redirect()->back()->withErrors(['error' => 'Combinaison d\'unités invalide']);
+        }
+
+        $matiere->update($request->validated());
+        DB::commit();
+
+        return redirect()->back()->with('success', 'Matière première mise à jour avec succès');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()->back()->withErrors(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()]);
+    }
+}
+
+    public function destroyMatiere(Matiere $matiere)
+    {
+        try {
+            DB::beginTransaction();
+            $matiere->delete();
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Matière première supprimée avec succès');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()]);
+        }
+    }
+    public function dashboard() {
+        return view('pages.chef_production.chef_production_dashboard');
+    }
+    public function createcommande()
+    {
+        $employe = Auth::user();
+        $nom = $employe->name;
+        $role = $employe->role;
+        $produits = Produit_fixes::all();
+        $commandes = Commande::all();
+        return view('pages.chef_production.ajouter-commande', compact('produits', 'commandes', 'role', 'nom'));
+    }
+
+    public function storeCommande(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'libelle' => 'required|string|max:50',
+                'produit' => 'required|exists:produit_fixes,code_produit',
+                'quantite' => 'required|integer|min:1',
+                'date_commande' => 'required|date',
+                'categorie' => 'required|in:patisserie,boulangerie'
+            ]);
+
+            \Log::info('Données validées :', $validated);  // Ajout de logging
+
+            $commande = new Commande();
+            $commande->libelle = $request->libelle;
+            $commande->produit = $request->produit;
+            $commande->quantite = $request->quantite;
+            $commande->date_commande = $request->date_commande;
+            $commande->categorie = $request->categorie;
+            $commande->valider = false; // Définition explicite de la valeur par défaut
+            $commande->save(); // Enregistrement dans la base de données
+
+
+            \Log::info('Avant sauvegarde');  // Ajout de logging
+            $commande->save();
+            \Log::info('Après sauvegarde');  // Ajout de logging
+
+            return redirect()->back()->with('success', 'Commande ajoutée avec succès');
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la création de la commande : ' . $e->getMessage());  // Ajout de logging
+            return redirect()->back()
+                ->withErrors([$e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    public function editcommande($id)
+    {
+        $commande = Commande::findOrFail($id);
+        $produits = Produit_fixes::all();
+        return view('pages.chef_production.modifier-commande', compact('commande', 'produits'));
+    }
+
+    public function updatecommande(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'libelle' => 'required|string|max:50',
+            'produit' => 'required|exists:Produit_fixes,code_produit',
+            'quantite' => 'required|integer|min:1',
+            'date_commande' => 'required|date',
+            'categorie' => 'required|string'
+        ]);
+
+        $commande = Commande::findOrFail($id);
+        $commande->update($validated);
+
+        return redirect()->route('chef.commandes.create')->with('success', 'Commande mise à jour avec succès');
+    }
+
+    public function destroycommande($id)
+    {
+        try {
+            $commande = Commande::findOrFail($id);
+            $commande->delete();
+            return response()->json(['status' => 'success', 'message' => 'Commande supprimée avec succès']);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => 'Erreur lors de la suppression']);
+        }
+    }
+
+    public function index()
+    {
+        $employe = Auth::user();
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        $nom = $employe->name;
+        $role = $employe->role;
+        $today = Carbon::today();
+
+        // Production aujourd'hui
+        $productionJour = $this->getProductionJournaliere();
+
+        // Bénéfice brut
+        $beneficeBrut = $this->getBeneficeBrut();
+
+        // Rendement
+        $rendementData = $this->getRendement();
+
+        // Pertes
+        $pertes = $this->getPertes();
+
+        // Gaspillage
+        $gaspillage = $this->getGaspillageMatiere();
+
+        // Données pour les graphiques
+        $graphData = $this->getGraphData();
+
+        // Productions en cours
+        $productionsEnCours = $this->getProductionsEnCours();
+
+        // Liste des produits pour le formulaire d'assignation
+        $produits = Produit_fixes::all();
+        $producteurs = User::where('role', 'boulanger')
+        ->orWhere('role', 'patissier')
+        ->get();
+
+
+        return view('pages.chef_production.chef_production_dashboard', compact(
+            'productionJour',
+            'beneficeBrut',
+            'rendementData',
+            'pertes',
+            'gaspillage',
+            'graphData',
+            'productionsEnCours',
+            'produits',
+            'producteurs',
+            'nom',
+            'role'
+        ));
+    }
+
+    private function getProductionJournaliere()
+    {
+        return Utilisation::whereDate('created_at', Carbon::today())
+    ->groupBy('id_lot')
+    ->select(DB::raw('SUM(quantite_produit) as total_production'))
+    ->get()
+    ->sum('total_production');
+
+    }
+
+private function getBeneficeBrut()
+{
+    try {
+        $beneficeBrut = DB::table('Utilisation as u')
+            ->join('Produit_fixes as p', 'u.produit', '=', 'p.code_produit')
+            ->select(
+                'u.id_lot',
+                DB::raw('SUM(u.quantite_produit * p.prix) as benefice_brut_par_lot')
+            )
+            ->whereDate('u.created_at', Carbon::today())
+            ->groupBy('u.id_lot') // Regrouper par lot
+            ->pluck('benefice_brut_par_lot') // Récupérer les bénéfices pour chaque lot
+            ->sum(); // Faire la somme pour obtenir le total
+
+        return $beneficeBrut ?? 0; // Retourner 0 si aucun résultat trouvé
+    } catch (\Exception $e) {
+        // Enregistrer l'erreur dans les logs
+        \Log::error('Erreur lors du calcul du bénéfice brut : ' . $e->getMessage());
+        return 0; // Retourner 0 en cas d'erreur
+    }
+}
+
+
+    private function getRendement()
+    {
+        $beneficeReel = $this->getBeneficeBrut();
+
+        $beneficeAttendu = DB::table('Daily_assignments as da')
+            ->join('Produit_fixes as p', 'da.produit', '=', 'p.code_produit')
+            ->whereDate('assignment_date', Carbon::today())
+            ->select(DB::raw('SUM(da.expected_quantity * p.prix) as benefice_attendu'))
+            ->value('benefice_attendu') ?? 0;
+
+        return [
+            'pourcentage' => $beneficeAttendu > 0 ? ($beneficeReel / $beneficeAttendu) * 100 : 0,
+            'reel' => $beneficeReel,
+            'attendu' => $beneficeAttendu
+        ];
+    }
+
+    private function getPertes()
+    {
+            $coutMatieresUtilisees = DB::table('Utilisation as u')
+                ->join('Matiere as m', 'u.matierep', '=', 'm.id')
+                ->whereDate('u.created_at', Carbon::today())
+                ->select(DB::raw('SUM(u.quantite_matiere * m.prix_par_unite_minimale) as cout_total'))
+                ->value('cout_total') ?? 0;
+
+            return $coutMatieresUtilisees;
+        }
+
+
+        private function getGaspillageMatiere()
+        {
+            $today = Carbon::today();
+
+            // Récupérer les utilisations groupées par produit, matière première et heure
+            $utilisations = DB::table('Utilisation as u')
+                ->join('Matiere as m', 'u.matierep', '=', 'm.id')
+                ->join('Produit_fixes as p', 'u.produit', '=', 'p.code_produit')
+                ->select(
+                    DB::raw('HOUR(u.created_at) as heure'),
+                    'u.produit',
+                    'u.matierep',
+                    DB::raw('SUM(u.quantite_matiere) as total_utilisee')
+                )
+                ->whereDate('u.created_at', $today)
+                ->groupBy(DB::raw('HOUR(u.created_at)'), 'u.produit', 'u.matierep')
+                ->get();
+
+            $gaspillageParHeure = [];
+
+            foreach ($utilisations as $utilisation) {
+                $heure = $utilisation->heure;
+                $produitId = $utilisation->produit;
+                $matiereId = $utilisation->matierep;
+                $quantiteUtilisee = $utilisation->total_utilisee;
+
+                $recommandation = DB::table('Matiere_recommander')
+                    ->where('produit', $produitId)
+                    ->where('matierep', $matiereId)
+                    ->first();
+
+                if ($recommandation) {
+                    $quantiteRecommandee = $recommandation->quantite;
+
+                    if ($quantiteUtilisee > $quantiteRecommandee) {
+                        $gaspillage = ($quantiteUtilisee - $quantiteRecommandee) / $quantiteRecommandee * 100;
+
+                        // Ajouter au gaspillage pour l'heure
+                        if (!isset($gaspillageParHeure[$heure])) {
+                            $gaspillageParHeure[$heure] = 0;
+                        }
+                        $gaspillageParHeure[$heure] += $gaspillage;
+                    }
+                }
+            }
+
+            // Assurez-vous de retourner un tableau avec les 24 heures de la journée
+            $gaspillageParHeureComplet = [];
+            for ($i = 0; $i < 24; $i++) {
+                $gaspillageParHeureComplet[$i] = $gaspillageParHeure[$i] ?? 0;
+            }
+
+            return $gaspillageParHeureComplet;
+        }
+
+
+
+
+        public function getGraphData()
+        {
+            $today = Carbon::today();
+
+            // Productions par heure
+            $productions = DB::table('Utilisation')
+                ->select(
+                    DB::raw('DATE_FORMAT(created_at, "%H:00:00") as timestamp'),
+                    DB::raw('id_lot'),
+                    DB::raw('SUM(quantite_produit) as total')
+                )
+                ->whereDate('created_at', $today)
+                ->groupBy('id_lot', DB::raw('DATE_FORMAT(created_at, "%H:00:00")'))
+                ->orderBy('timestamp')
+                ->get()
+                ->groupBy('timestamp')
+                ->map(function ($group) {
+                    return [
+                        'timestamp' => $group->first()->timestamp,
+                        'total' => $group->sum('total')
+                    ];
+                })
+                ->values();
+
+            // Pertes/Gaspillage par heure
+            $pertes = DB::table('Utilisation as u')
+                ->join('Matiere_recommander as mr', function($join) {
+                    $join->on('u.produit', '=', 'mr.produit')
+                         ->on('u.matierep', '=', 'mr.matierep');
+                })
+                ->select(
+                    DB::raw('DATE_FORMAT(u.created_at, "%H:00:00") as timestamp'),
+                    DB::raw('u.id_lot'),
+                    DB::raw('SUM(CASE
+                        WHEN u.quantite_matiere > mr.quantite
+                        THEN ((u.quantite_matiere - mr.quantite) / mr.quantite * 100)
+                        ELSE 0
+                    END) as perte')
+                )
+                ->whereDate('u.created_at', $today)
+                ->groupBy('id_lot', DB::raw('DATE_FORMAT(u.created_at, "%H:00:00")'))
+                ->orderBy('timestamp')
+                ->get()
+                ->groupBy('timestamp')
+                ->map(function ($group) {
+                    return [
+                        'timestamp' => $group->first()->timestamp,
+                        'perte' => $group->avg('perte')
+                    ];
+                })
+                ->values();
+
+            // Bénéfices par heure
+            $benefices = DB::table('Utilisation as u')
+                ->join('Produit_fixes as p', 'u.produit', '=', 'p.code_produit')
+                ->join('Matiere as m', 'u.matierep', '=', 'm.id')
+                ->select(
+                    DB::raw('DATE_FORMAT(u.created_at, "%H:00:00") as timestamp'),
+                    DB::raw('u.id_lot'),
+                    DB::raw('SUM(u.quantite_produit * p.prix) - SUM(u.quantite_matiere * m.prix_par_unite_minimale) as benefice')
+                )
+                ->whereDate('u.created_at', $today)
+                ->groupBy('id_lot', DB::raw('DATE_FORMAT(u.created_at, "%H:00:00")'))
+                ->orderBy('timestamp')
+                ->get()
+                ->groupBy('timestamp')
+                ->map(function ($group) {
+                    return [
+                        'timestamp' => $group->first()->timestamp,
+                        'benefice' => $group->sum('benefice')
+                    ];
+                })
+                ->values();
+
+            // Calcul du gaspillage moyen
+            $gaspillageTotal = $pertes->avg('perte') ?? 0;
+
+            // Assurer que toutes les heures sont représentées (de 00:00 à 23:00)
+            $heuresCompletes = collect(range(0, 23))->map(function ($heure) {
+                return str_pad($heure, 2, '0', STR_PAD_LEFT) . ':00:00';
+            });
+
+            $productions = $this->completerHeures($productions, $heuresCompletes);
+            $pertes = $this->completerHeures($pertes, $heuresCompletes);
+            $benefices = $this->completerHeures($benefices, $heuresCompletes);
+
+            return [
+                'productions' => $productions,
+                'pertes' => $pertes,
+                'benefices' => $benefices,
+                'gaspillage' => round($gaspillageTotal, 2)
+            ];
+        }
+
+        private function completerHeures($donnees, $heuresCompletes)
+        {
+            $donneesParHeure = $donnees->pluck('timestamp')->flip();
+
+            return $heuresCompletes->map(function ($heure) use ($donnees, $donneesParHeure) {
+                if (isset($donneesParHeure[$heure])) {
+                    return $donnees[$donneesParHeure[$heure]];
+                }
+
+                return [
+                    'timestamp' => $heure,
+                    'total' => 0,
+                    'perte' => 0,
+                    'benefice' => 0
+                ];
+            })->values();
+        }
+
+
+
+    private function getProductionsEnCours()
+    {
+        $assignments = Daily_assignments::with(['produitFixe'])
+            ->whereDate('assignment_date', Carbon::today())
+            ->get();
+
+        if ($assignments->isEmpty()) {
+            return Utilisation::with(['produitFixe'])
+                ->whereDate('created_at', Carbon::today())
+                ->select('produit', DB::raw('SUM(quantite_produit) as total_produit'))
+                ->groupBy('produit','id_lot')
+                ->get();
+        }
+
+        return $assignments->map(function ($assignment) {
+            $productionActuelle = Utilisation::where([
+                'produit' => $assignment->produit,
+                'producteur' => $assignment->producteur
+            ])
+            ->whereDate('created_at', Carbon::today())
+            ->sum('quantite_produit');
+
+            return [
+                'produit' => $assignment->produitFixe->nom,
+                'quantite_actuelle' => $productionActuelle,
+                'quantite_attendue' => $assignment->expected_quantity,
+                'progression' => ($productionActuelle / $assignment->expected_quantity) * 100,
+                'status' => $assignment->status
+            ];
+        });
+    }
+
+    public function assignerProduction(Request $request)
+    {
+        $validated = $request->validate([
+            'producteur' => 'required|exists:users,id',
+            'produit' => 'required|exists:Produit_fixes,code_produit',
+            'quantite' => 'required|integer|min:1',
+            'notes' => 'nullable|string'
+        ]);
+
+        $assignment = new Daily_assignments();
+        $assignment->chef_production = auth()->id();
+        $assignment->producteur = $validated['producteur'];
+        $assignment->produit = $validated['produit'];
+        $assignment->expected_quantity = $validated['quantite'];
+        $assignment->assignment_date = Carbon::today();
+        $assignment->status = 0;
+        $assignment->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Production assignée avec succès'
+        ]);
+    }
+
+    public function createmanquant()
+    {
+        $employe = Auth::user();
+        $nom = $employe->name;
+        $role = $employe->role;
+        $employees = User::where('role', 'patissier')
+        ->orWhere('role', 'boulanger')
+        ->get();
+return view('pages.manquant', compact('employees','nom','role'));
+    }
+
+    public function storemanquant(Request $request)
+    {
+        // Validation des données
+        $request->validate([
+            'id_employe' => 'required|exists:users,id',
+            'manquants' => 'required|numeric|min:0',
+        ]);
+
+        // Recherche d'une entrée existante pour l'employé pour aujourd'hui
+        $manquant = Acouper::where('id_employe', $request->id_employe)
+                           ->whereDate('date', now()->toDateString())
+                           ->first();
+
+        if ($manquant) {
+            // Mise à jour de l'entrée existante
+            $manquant->update([
+                'manquants' => $manquant->manquants + $request->manquants,
+                'date' => now(),
+            ]);
+        } else {
+            // Création d'une nouvelle entrée
+            Acouper::create([
+                'id_employe' => $request->id_employe,
+                'manquants' => $request->manquants,
+                'date' => now(),
+            ]);
+        }
+
+        return redirect()->route('manquant.create')
+            ->with('success', 'Manquant ' . ($manquant ? 'mis à jour' : 'attribué') . ' avec succès.');
+    }
+
+
+public function versementsEnAttente()
+{
+    $employe = Auth::user();
+    $nom = $employe->name;
+    $role = $employe->role;
+
+    $versements = DB::table('Versement_csg as v')
+        ->join('users as verseur', 'v.verseur', '=', 'verseur.id')
+        ->join('users as encaisseur', 'v.encaisseur', '=', 'encaisseur.id')
+        ->where('v.status', 'en_attente')
+        ->select('v.*',
+                'verseur.name as nom_verseur',
+                'encaisseur.name as nom_encaisseur')
+        ->orderBy('v.date', 'desc')
+        ->get();
+
+    return view('pages.chef_production.versements_validation', compact('versements', 'nom', 'role'));
+}
+
+public function validerVersement(Request $request, $code_vcsg)
+{
+    try {
+        DB::beginTransaction();
+
+        $versement = DB::table('Versement_csg')->where('code_vcsg', $code_vcsg)->first();
+
+        if (!$versement) {
+            throw new \Exception("Versement non trouvé");
+        }
+
+        DB::table('Versement_csg')
+            ->where('code_vcsg', $code_vcsg)
+            ->update([
+                'status' => $request->action === 'valider' ? 'valide' : 'rejete',
+                'commentaire' => $request->commentaire
+            ]);
+
+        DB::commit();
+
+        $message = $request->action === 'valider' ?
+            'Versement validé avec succès' :
+            'Versement rejeté avec succès';
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $message
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Erreur lors du traitement: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function choix_classement(){
+    return view('pages.choix-classement');
+}
+
+}
+<?php
+
+namespace App\Http\Controllers;
+
+abstract class Controller
+{
+    //
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class DdgController extends Controller
+{
+    public function dashboard() {
+        return view('pages/ddg/ddg_dashboard');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Depense;
+use App\Models\Matiere;
+use Illuminate\Http\Request;
+
+class DepenseController extends Controller
+{
+    public function index()
+    {
+        $nom = auth()->user()->name;
+        $role = auth()->user()->role;
+        $depenses = Depense::with(['user', 'matiere'])->latest('date')->get();
+        return view('depenses.index', compact('depenses','nom','role'));
+    }
+    public function index2()
+    {
+        $nom = auth()->user()->name;
+        $role = auth()->user()->role;
+        $depenses = Depense::with(['user', 'matiere'])->latest('date')->get()->where('type', 'livraison_matiere');
+        return view('depenses.index2', compact('depenses','nom','role'));
+    }
+
+    public function create()
+    {
+        $matieres = Matiere::all();
+        return view('depenses.create', compact('matieres'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'nom' => 'required|string|max:255',
+            'type' => 'required|in:achat_matiere,livraison_matiere,reparation',
+            'date' => 'required|date',
+            'idm' => 'required_if:type,achat_matiere,livraison_matiere|exists:Matiere,id|nullable',
+            'prix' => 'required_if:type,reparation|numeric|nullable',
+            'quantite' => 'required_if:type,achat_matiere,livraison_matiere|numeric|nullable'
+        ]);
+
+        // Calculer le prix pour achat/livraison de matière
+        if (in_array($validated['type'], ['achat_matiere', 'livraison_matiere'])) {
+            $matiere = Matiere::findOrFail($validated['idm']);
+            $validated['prix'] = $matiere->prix_unitaire * $validated['quantite'];
+        }
+
+        // Valider automatiquement sauf pour les livraisons
+        $validated['valider'] = $validated['type'] !== 'livraison_matiere';
+        $validated['auteur'] = auth()->id();
+
+        Depense::create($validated);
+
+        return redirect()->route('depenses.index')
+            ->with('success', 'Dépense enregistrée avec succès.');
+    }
+
+    public function edit(Depense $depense)
+    {
+        $matieres = Matiere::all();
+        return view('depenses.edit', compact('depense', 'matieres'));
+    }
+
+    public function update(Request $request, Depense $depense)
+    {
+        $validated = $request->validate([
+            'nom' => 'required|string|max:255',
+            'type' => 'required|in:achat_matiere,livraison_matiere,reparation',
+            'date' => 'required|date',
+            'idm' => 'required_if:type,achat_matiere,livraison_matiere|exists:Matiere,id|nullable',
+            'prix' => 'required_if:type,reparation|numeric|nullable',
+            'quantite' => 'required_if:type,achat_matiere,livraison_matiere|numeric|nullable'
+        ]);
+
+        if (in_array($validated['type'], ['achat_matiere', 'livraison_matiere'])) {
+            $matiere = Matiere::findOrFail($validated['idm']);
+            $validated['prix'] = $matiere->prix_unitaire * $validated['quantite'];
+        }
+
+        $depense->update($validated);
+
+        return redirect()->route('depenses.index')
+            ->with('success', 'Dépense mise à jour avec succès.');
+    }
+
+    public function destroy(Depense $depense)
+    {
+        $depense->delete();
+        return redirect()->route('depenses.index')
+            ->with('success', 'Dépense supprimée avec succès.');
+    }
+
+    public function validerLivraison(Depense $depense)
+    {
+        if ($depense->type !== 'livraison_matiere') {
+            return back()->with('error', 'Cette dépense n\'est pas une livraison.');
+        }
+
+        $depense->update(['valider' => true]);
+
+        return redirect()->route('depenses.index')
+            ->with('success', 'Livraison validée avec succès.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class DgController extends Controller
+{
+    public function dashboard() {
+        return view('pages/dg/dg-dashboard');
+    }
+    public function rapports() {
+        return view('pages/dg/dg_rapports');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use App\Models\Evaluation;
+use App\Models\TransactionVente;
+use App\Models\ProduitRecu;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class EmployeeRankingController extends Controller
+{
+    public function index()
+    {
+        $regularEmployees = $this->getRegularEmployeeRankings();
+        $serverRankings = $this->getServerRankings();
+
+        return view('rankings.index', compact('regularEmployees', 'serverRankings'));
+    }
+
+    private function getRegularEmployeeRankings()
+    {
+        return User::whereNotIn('role', ['serveur'])
+            ->with(['evaluation' => function($query) {
+                $query->whereMonth('created_at', Carbon::now()->month);
+            }])
+            ->get()
+            ->map(function($employee) {
+                return [
+                    'id' => $employee->id,
+                    'name' => $employee->name,
+                    'average_rating' => $employee->evaluation->avg('note') ?? 0,
+                ];
+            })
+            ->sortByDesc('average_rating')
+            ->values();
+    }
+
+    private function getServerRankings()
+    {
+        $currentMonth = Carbon::now()->month;
+
+        $servers = User::where('role', 'serveur')->get();
+
+        return $servers->map(function($server) use ($currentMonth) {
+            // Calculate sales
+            $sales = TransactionVente::where('serveur', $server->id)
+                ->whereMonth('date_vente', $currentMonth)
+                ->sum(DB::raw('quantite * prix'));
+
+            // Calculate average rating
+            $avgRating = Evaluation::where('user_id', $server->id)
+                ->whereMonth('created_at', $currentMonth)
+                ->avg('note') ?? 0;
+
+            // Calculate missing items
+            $missing = $this->calculateMissingItems($server->id, $currentMonth);
+
+            return [
+                'id' => $server->id,
+                'name' => $server->name,
+                'sales' => $sales,
+                'average_rating' => $avgRating,
+                'missing_items' => $missing,
+                'total_score' => $this->calculateTotalScore($sales, $avgRating, $missing)
+            ];
+        })
+        ->sortByDesc('total_score')
+        ->values();
+    }
+
+    private function calculateMissingItems($serverId, $month)
+    {
+        $totalMissing = 0;
+
+        // Group by date and product to calculate daily missing items
+        $dailyProducts = ProduitRecu::where('pointeur', $serverId)
+            ->whereMonth('date', $month)
+            ->get()
+            ->groupBy(['date', 'produit']);
+
+        foreach ($dailyProducts as $date => $products) {
+            foreach ($products as $productId => $receivedProducts) {
+                $received = $receivedProducts->sum('quantite');
+
+                $sold = TransactionVente::where('serveur', $serverId)
+                    ->where('produit', $productId)
+                    ->where('date_vente', $date)
+                    ->sum('quantite');
+
+                // Note: You'll need to add logic for remaining and damaged products
+                // This is a simplified version
+                $remaining = 0; // Get from inventory
+                $damaged = 0;   // Get from damage reports
+
+                $missing = ($received - $sold + $remaining + $damaged) * $receivedProducts->first()->prix;
+                $totalMissing += max(0, $missing);
+            }
+        }
+
+        return $totalMissing;
+    }
+
+    private function calculateTotalScore($sales, $rating, $missing)
+    {
+        // Customize this formula based on your business rules
+        // This is just an example
+        $salesScore = $sales / 1000; // Points per 1000 in sales
+        $ratingScore = $rating * 10;  // Points per rating point
+        $missingPenalty = $missing / 100; // Penalty per 100 in missing items
+
+        return $salesScore + $ratingScore - $missingPenalty;
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use App\Models\Evaluation;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+
+class EvaluationController extends Controller
+{
+    public function index()
+    {
+        $employees = User::where('role', '!=', 'DG')
+            ->with('evaluation')
+            ->get()
+            ->map(function ($employee) {
+                $employee->age = Carbon::parse($employee->date_naissance)->age;
+                return $employee;
+            });
+
+        return view('employees.index', compact('employees'));
+    }
+
+    public function show(User $user)
+    {
+        $user->age = Carbon::parse($user->date_naissance)->age;
+        $user->load('evaluation');
+        return view('employees.show', compact('user'));
+    }
+
+    public function evaluate(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'note' => 'required|numeric|min:0|max:20',
+            'appreciation' => 'required|string|max:1000'
+        ]);
+
+        $evaluation = Evaluation::updateOrCreate(
+            ['user_id' => $user->id],
+            $validated
+        );
+
+        return redirect()->route('employees.show', $user)
+            ->with('success', 'Évaluation enregistrée avec succès');
+    }
+
+    public function stats()
+    {
+        $stats = [
+            'total_employees' => User::where('role', '!=', 'DG')->count(),
+            'average_note' => Evaluation::avg('note'),
+            'employees' => User::where('role', '!=', 'DG')
+                ->with('evaluation')
+                ->get()
+                ->map(function ($employee) {
+                    $employee->age = Carbon::parse($employee->date_naissance)->age;
+                    return $employee;
+                })
+        ];
+
+        return view('employees.stats', compact('stats'));
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use App\Services\SalaireCalculator;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+
+class FichePaieController extends Controller
+{
+    private $salaireCalculator;
+
+    public function __construct(SalaireCalculator $salaireCalculator)
+    {
+        $this->salaireCalculator = $salaireCalculator;
+    }
+
+    public function show(Request $request)
+    {
+        $mois = $request->get('mois')
+            ? Carbon::createFromFormat('Y-m', $request->get('mois'))
+            : Carbon::now()->startOfMonth();
+
+        $employe = auth()->user();
+        $fichePaie = $this->salaireCalculator->calculerFichePaie($employe, $mois);
+
+        return view('pages.fiche-paie.show', [
+            'employe' => $employe,
+            'fichePaie' => $fichePaie,
+            'mois' => $mois
+        ]);
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class GlaceController extends Controller
+{
+    public function dashboard() {
+        return view('pages/glace/glace_dashboard');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Horaire;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+
+class HoraireController extends Controller
+{
+    public function index()
+    {
+        $horaires = Horaire::where('employe', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $serverTime = now()->format('Y-m-d H:i:s');
+        return view('pages.horaire.index', compact('horaires', 'serverTime'));
+    }
+
+    public function marquerArrivee()
+    {
+        // Vérifier s'il n'y a pas déjà une entrée non terminée
+        $horaireExistant = Horaire::where('employe', auth()->id())
+            ->whereNull('depart')
+            ->first();
+
+        if ($horaireExistant) {
+            return redirect()->back()->with('error', 'Vous avez déjà marqué votre arrivée');
+        }
+
+        // Créer une nouvelle entrée avec seulement l'heure d'arrivée
+        Horaire::create([
+            'employe' => auth()->id(),
+            'arrive' => now(),
+            'depart' => null
+        ]);
+
+        return redirect()->back()->with('success', 'Heure d\'arrivée enregistrée');
+    }
+
+    public function marquerDepart()
+    {
+        $horaire = Horaire::where('employe', auth()->id())
+            ->whereNull('depart')
+            ->latest()
+            ->first();
+
+        if (!$horaire) {
+            return redirect()->back()->with('error', 'Aucune entrée d\'arrivée trouvée');
+        }
+
+        $horaire->update(['depart' => now()]);
+        return redirect()->back()->with('success', 'Heure de départ enregistrée');
+    }
+
+    public function enregistrerHoraire(Request $request)
+    {
+        $request->validate([
+            'arrive' => 'required|date_format:H:i',
+            'depart' => 'required|date_format:H:i|after:arrive'
+        ]);
+
+        $today = Carbon::today();
+        $arrive = Carbon::createFromFormat('H:i', $request->arrive)->setDate(
+            $today->year,
+            $today->month,
+            $today->day
+        );
+
+        $depart = Carbon::createFromFormat('H:i', $request->depart)->setDate(
+            $today->year,
+            $today->month,
+            $today->day
+        );
+
+        Horaire::create([
+            'employe' => auth()->id(),
+            'arrive' => $arrive,
+            'depart' => $depart
+        ]);
+
+        return redirect()->back()->with('success', 'Horaires enregistrés avec succès');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Message;
+use Illuminate\Http\Request;
+use App\Models\ACouper;
+use App\Models\User;
+
+
+class MessageController extends Controller
+{
+    public function message() {
+        $employe = auth()->user();
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        return view('pages.message');
+    }
+    public function store_message(Request $request) {
+        if (!auth()->user()) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        $validatedData = $request->validate([
+            'message' => 'required|string|max:1000',
+            'category' => 'nullable|string'
+        ]);
+
+        $messageData = [
+            'message' => $validatedData['message'],
+            'type' => $validatedData['category'] ?? 'report',
+            'date_message' => now(),
+            'name' => $request->type != 'complaint-private' ? auth()->user()->name : 'null'
+        ];
+
+        Message::create($messageData);
+
+       return redirect()->back()->with('success','message transmis avec succes');
+    }
+
+
+    public function lecture_message()
+{
+    $employe = auth()->user();
+    if (!$employe) {
+        return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+    }
+
+    $messages_complaint_private = Message::where('type', 'complaint-private')->get();
+    $messages_suggestion = Message::where('type', 'suggestion')->get();
+    $messages_report = Message::where('type', 'report')->get();
+    $messages_error = Message::where('type', 'error')->get();
+
+    return view('pages.lecture_message', compact(
+        'messages_complaint_private',
+        'messages_suggestion',
+        'messages_report',
+        'messages_error'
+    ));
+}
+public function destroy(Message $message)
+{
+    $message->delete();
+    return redirect()->back()->with('success', 'Message supprimé');
+}
+
+public function markRead($type)
+{
+    try {
+        // Mettre à jour tous les messages non lus du type spécifié
+        Message::where('type', $type)
+              ->where('read', false)
+              ->update(['read' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Messages marqués comme lus'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la mise à jour des messages'
+        ], 500);
+    }
+}
+public function showManquants() {
+    $employe = auth()->user();
+    if (!$employe) {
+        return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+    }
+    $info = User::where('id', $employe->id)->first();
+    $nom = $info->name;
+    $secteur = $info->secteur;
+    $manquants = ACouper::where('id_employe', $employe->id)
+    ->whereMonth('date', now()->month)
+    ->whereYear('date', now()->year)
+    ->first()
+    ->manquants ?? 0;
+    return view('pages.voir_manquants', compact('manquants','nom','secteur'))->with('success','Requete Envoyer avec success');
+}
+
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class PdgController extends Controller
+{
+    public function dashboard() {
+        return view('pages/pdg/pdg_dashboard');
+    }
+
+    public function depense() {
+        return view('pages/pdg/pdg_depense');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Planning;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+
+class PlanningController extends Controller
+{
+    public function index()
+    {
+        $employes = User::whereIn('role', ['boulanger', 'patissier', 'serveur'])->get();
+        $plannings = Planning::with('user')->get();
+
+        // Grouper les jours de repos par employé
+        $joursRepos = Planning::where('type', 'repos')
+            ->whereDate('date', '>=', now())
+            ->with('user')
+            ->get()
+            ->groupBy('employe');
+
+        return view('plannings.index', compact('employes', 'plannings', 'joursRepos'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'libelle' => 'required|string',
+            'employe' => 'required|exists:users,id',
+            'type' => 'required|in:tache,repos',
+            'date' => 'required|date',
+            'heure_debut' => 'nullable|date_format:H:i',
+            'heure_fin' => 'nullable|date_format:H:i|after:heure_debut'
+        ]);
+
+        // Vérifier s'il existe déjà un planning pour cet employé à cette date
+        $existingPlanning = Planning::where('employe', $validated['employe'])
+            ->whereDate('date', $validated['date'])
+            ->first();
+
+        if ($existingPlanning) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Un planning existe déjà pour cet employé à cette date'
+            ], 422);
+        }
+
+        $planning = Planning::create($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'planning' => $planning
+        ]);
+    }
+
+    public function update(Request $request, Planning $planning)
+    {
+        $validated = $request->validate([
+            'libelle' => 'required|string',
+            'type' => 'required|in:tache,repos',
+            'date' => 'required|date',
+            'heure_debut' => 'nullable|date_format:H:i',
+            'heure_fin' => 'nullable|date_format:H:i|after:heure_debut'
+        ]);
+
+        $planning->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'planning' => $planning
+        ]);
+    }
+
+    public function destroy(Planning $planning)
+    {
+        $planning->delete();
+
+        return response()->json([
+            'status' => 'success'
+        ]);
+    }
+
+    public function monPlanning()
+    {
+        $employe_id = auth()->id();
+        $plannings = Planning::where('employe', $employe_id)
+            ->whereDate('date', '>=', now())
+            ->orderBy('date')
+            ->get();
+
+        return view('plannings.mon-planning', compact('plannings'));
+    }
+
+    public function getEvents()
+    {
+        $plannings = Planning::with('user')->get();
+
+        return response()->json($plannings->map(function($planning) {
+            return [
+                'id' => $planning->id,
+                'title' => $planning->libelle,
+                'start' => $planning->date->format('Y-m-d') .
+                    ($planning->heure_debut ? 'T' . $planning->heure_debut->format('H:i:s') : ''),
+                'end' => $planning->date->format('Y-m-d') .
+                    ($planning->heure_fin ? 'T' . $planning->heure_fin->format('H:i:s') : ''),
+                'backgroundColor' => $planning->type === 'repos' ? '#EF4444' : '#3B82F6',
+                'borderColor' => $planning->type === 'repos' ? '#DC2626' : '#2563EB',
+                'extendedProps' => [
+                    'type' => $planning->type,
+                    'employe' => $planning->user->name
+                ]
+            ];
+        }));
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class PointeurController extends Controller
+{
+    public function dashboard() {
+        return view('pages/pointeur/pointeur_dashboard');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Prime;
+use App\Models\User;
+use Illuminate\Http\Request;
+
+class PrimeController extends Controller
+{
+    public function index()
+    {
+        $employe = auth()->user();
+        $primes = Prime::where('id_employe', $employe->id)
+                      ->orderBy('created_at', 'desc')
+                      ->get();
+
+        $totalPrimes = $primes->sum('montant');
+        $hasPrimes = $primes->count() > 0;
+
+        return view('pages.mes_primes', compact('primes', 'totalPrimes', 'hasPrimes'));
+    }
+
+    public function create()
+    {
+        $employes = User::whereNotIn('role', ['dg', 'pdg', 'ddg'])
+                       ->orderBy('name')
+                       ->get();
+
+        return view('pages.dg.attribution-prime', compact('employes'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'id_employe' => 'required|exists:users,id',
+            'libelle' => 'required|string|max:255',
+            'montant' => 'required|numeric|min:0'
+        ]);
+
+        Prime::create($validated);
+
+        return redirect()->back()->with('success', 'Prime attribuée avec succès');
+    }
+}
+<?php
+namespace App\Http\Controllers;
+use App\Models\Production;
+use App\Models\Daily_assignments;
+use App\Models\Produit_fixes;
+use App\Models\User;
+use App\Models\Commande;
+use App\Models\Production_suggerer_par_jour;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;  // Ajout de l'import
+use App\Models\Utilisation;
+use App\Models\Matiere;
+use App\Services\UniteConversionService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\StoreUtilisationRequest;
+use App\Services\AdvancedProductionStatsService;
+use App\Services\ProductionService;
+use App\Services\ProducteurComparisonService;
+use App\Services\ProductionStatsService;
+use App\Services\LotGeneratorService;
+use App\Services\PerformanceService;
+use Illuminate\Support\Facades\Log;
+use App\Models\ReservationMp;
+
+class ProducteurController extends Controller  // Hérite de Controller
+{
+
+
+    protected $statsService;
+    protected $conversionService;
+    protected $productionService;
+    protected $uniteConversionService;
+    protected $lotGeneratorService;
+
+    public function __construct(
+        AdvancedProductionStatsService $statsService,
+        UniteConversionService $uniteConversionService,
+        ProductionService $productionService,
+        LotGeneratorService $lotGeneratorService,
+        ProductionStatsService $productionStatsService
+    ) {
+        $this->statsService = $statsService;
+        $this->uniteConversionService = $uniteConversionService;
+        $this->conversionService = $uniteConversionService;
+        $this->productionService = $productionService;
+        $this->lotGeneratorService = $lotGeneratorService;
+        $this->productionStatsService = $productionStatsService;
+
+    }
+
+
+    public function produit()
+    {
+        $employe = Auth::user();
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        // Récupérer le rôle
+        $role = $employe->role === 'patissier' ? 'patisserie' :
+               ($employe->role === 'boulanger' ? 'boulangerie' : '');
+
+        // Récupérer les données via le service
+        $productions = $this->productionService->getTodayProductions($employe->id);
+        $productions_attendues = $this->productionService->getExpectedProductions($employe->id);
+        $productions_recommandees = $this->productionService->getRecommendedProductions();
+
+        // Données complémentaires
+        $all_produits = Produit_fixes::where('categorie', $role)->get();
+        $info = User::find($employe->id);
+
+        return view('pages.producteur.producteur_produit', [
+            'p' => $productions,
+            'all_produits' => $all_produits,
+            'heure_actuelle' => now(),
+            'nom' => $info->name,
+            'secteur' => $info->secteur,
+            'productions_attendues' => $productions_attendues,
+            'productions_recommandees' => $productions_recommandees,
+            'day' => strtolower(now()->locale('fr')->dayName)
+        ]);
+    }
+
+    public function produit_par_lot()
+    {
+        $utilisations = DB::table('Utilisation')
+        ->join('Produit_fixes', 'Utilisation.produit', '=', 'Produit_fixes.code_produit')
+        ->join('Matiere', 'Utilisation.matierep', '=', 'Matiere.id')
+        ->select(
+            'Utilisation.id_lot',
+            'Produit_fixes.nom as nom_produit',
+            'Produit_fixes.prix as prix_produit',
+            'Utilisation.quantite_produit',
+            'Matiere.nom as nom_matiere',
+            'Matiere.prix_par_unite_minimale',
+            'Utilisation.quantite_matiere',
+            'Utilisation.unite_matiere'
+        )
+        ->orderBy('Utilisation.id_lot')
+        ->get();
+
+    $productionsParLot = [];
+
+    foreach ($utilisations as $utilisation) {
+        $idLot = $utilisation->id_lot;
+        $nomProduit = $utilisation->nom_produit;
+
+        if (!isset($productionsParLot[$idLot])) {
+            $productionsParLot[$idLot] = [
+                'produit' => $nomProduit,
+                'quantite_produit' => $utilisation->quantite_produit,
+                'prix_unitaire' => $utilisation->prix_produit,
+                'matieres' => [],
+                'valeur_production' => $utilisation->quantite_produit * $utilisation->prix_produit,
+                'cout_matieres' => 0
+            ];
+        }
+
+        $productionsParLot[$idLot]['matieres'][] = [
+            'nom' => $utilisation->nom_matiere,
+            'quantite' => $utilisation->quantite_matiere,
+            'unite' => $utilisation->unite_matiere,
+            'cout' => $utilisation->quantite_matiere * $utilisation->prix_par_unite_minimale
+        ];
+
+        $productionsParLot[$idLot]['cout_matieres'] +=
+            $utilisation->quantite_matiere * $utilisation->prix_par_unite_minimale;
+    }
+         $info = Auth::user();
+        $nom = $info->name;
+        $secteur = $info->secteur;
+
+    return view('pages.producteur.produit_par_lot', compact('productionsParLot','nom','secteur'));
+    }
+
+
+private function getPeriode(): array
+{
+    return [
+        'debut' => now()->startOfMonth(),
+        'fin' => now()->endOfMonth(),
+        'mois_actuel' => now()->format('F Y')
+    ];
+}
+
+
+
+
+
+    public function commande() {
+    // Vérification de l'authentification
+    $employe = auth()->user();
+    if (!$employe) {
+        return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+    }
+
+    // Définition du rôle avec tableau associatif (plus propre)
+    $roles = [
+        'patissier' => 'patisserie',
+        'boulanger' => 'boulangerie'
+    ];
+    $role = $roles[$employe->role] ?? '';
+
+    // Récupération des infos utilisateur
+    $info = User::where('id', $employe->id)->first();
+    $nom = $info->name;
+    $secteur = $info->secteur;
+
+    // Récupération des commandes
+    $commandes = Commande::where('categorie', $role)->where('valider',0)->get();
+    return view('pages/producteur/producteur_commande', compact('nom', 'secteur', 'commandes'));
+}
+
+
+    public function reserverMp() {
+        $employe = auth()->user();
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        $info = User::where('id', $employe->id)->first();
+        $nom = $info ->name;
+        $secteur = $info->secteur;
+        return view('pages/producteur/producteur_reserverMp',compact('nom','secteur'));
+
+    }
+
+
+    public function stat_prod()
+    {
+        $employe = Auth::user();
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        $stats = $this->statsService->getStats($employe->id);
+
+        return view('pages.producteur.stat_prod', [
+            'stats' => $stats,
+            'nom' => $employe->name,
+            'secteur' => $employe->secteur
+        ]);
+    }
+
+    public function create()
+    {
+        $produits = Produit_fixes::all();
+        $matieres = Matiere::all();
+        $info = Auth::user();
+        $nom = $info->name;
+        $secteur = $info->secteur;
+        return view('pages.producteur.produitmp', compact('produits', 'matieres','nom','secteur'));
+    }
+
+    public function store2(StoreUtilisationRequest $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Générer un ID de lot unique pour cette production
+            $lotId = $this->lotGeneratorService->generateLotId();
+
+            foreach ($request->matieres as $matiere) {
+                $matiereModel = Matiere::findOrFail($matiere['matiere_id']);
+
+                $quantiteConvertie = $this->uniteConversionService->convertir(
+                    $matiere['quantite'],
+                    $matiere['unite'],
+                    $matiereModel->unite_minimale
+                );
+
+                $utilisation = new Utilisation();
+                $utilisation->id_lot = $lotId; // Assigner le même ID de lot
+                $utilisation->produit = $request->produit;
+                $utilisation->matierep = $matiere['matiere_id'];
+                $utilisation->producteur = Auth::id();
+                $utilisation->quantite_produit = $request->quantite_produit;
+                $utilisation->quantite_matiere = $quantiteConvertie;
+                $utilisation->unite_matiere = $matiereModel->unite_minimale;
+
+                $utilisation->save();
+            }
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Production enregistrée avec succès');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Erreur lors de l\'enregistrement: ' . $e->getMessage())->withInput();
+        }
+    }
+
+public function comparaison(Request $request)
+{
+    $employe = auth()->user();
+    if (!$employe) {
+        return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+    }
+
+    $critere = $request->input('critere', 'benefice');
+    $periode = $request->input('periode', 'mois');
+    $dateDebut = $request->input('date_debut');
+    $dateFin = $request->input('date_fin');
+
+    $comparisonService = app(ProducteurComparisonService::class);
+    $resultats = $comparisonService->compareProducteurs($critere, $periode, $dateDebut, $dateFin);
+
+    return view('pages.producteur.comparaison', [
+        'resultats' => $resultats,
+        'critere' => $critere,
+        'periode' => $periode,
+        'date_debut' => $dateDebut,
+        'date_fin' => $dateFin
+    ]);
+}
+
+public function fiche_production()
+{
+    $employe = auth()->user();
+    if (!$employe) {
+        return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+    }
+
+    $userId = auth()->id();
+    $stats = $this->statsService->getStats($userId);
+
+    // Calcul des statistiques globales
+    $globalStats = $this->calculateGlobalStats($stats);
+
+    // Calcul des appréciations
+    $appreciations = $this->calculateAppreciations($globalStats, $stats);
+    $info = User::where('id', $employe->id)->first();
+    $nom = $info ->name;
+    $secteur = $info->secteur;
+    $age = $info->age;
+    return view('pages.producteur.producteur_fiche_production', compact('stats', 'globalStats', 'appreciations','nom', 'secteur', 'age'));
+}
+
+private function calculateGlobalStats($stats)
+{
+    $products = collect($stats['products']);
+
+    return [
+        'max_production' => [
+            'produit' => $products->sortByDesc('produit.quantite_totale')->first(),
+            'valeur' => $products->max('produit.quantite_totale')
+        ],
+        'max_benefice' => [
+            'produit' => $products->sortByDesc('benefice')->first(),
+            'valeur' => $products->max('benefice')
+        ],
+        'max_perte' => [
+            'produit' => $products->sortBy('benefice')->first(),
+            'valeur' => $products->min('benefice')
+        ],
+        'meilleur_jour' => [
+            'date' => collect($stats['daily']['quantities'])->search(collect($stats['daily']['quantities'])->max()),
+            'quantite' => collect($stats['daily']['quantities'])->max()
+        ],
+        'meilleur_mois' => [
+            'date' => collect($stats['monthly']['quantities'])->search(collect($stats['monthly']['quantities'])->max()),
+            'quantite' => collect($stats['monthly']['quantities'])->max()
+        ],
+        'total_benefice' => $products->sum('benefice'),
+        'moyenne_marge' => $products->avg('marge')
+    ];
+}
+
+private function calculateAppreciations($globalStats, $stats)
+{
+    $appreciations = [];
+
+    // Appréciation de la rentabilité
+    if ($globalStats['moyenne_marge'] > 30) {
+        $appreciations['rentabilite'] = 'Excellente rentabilité';
+    } elseif ($globalStats['moyenne_marge'] > 20) {
+        $appreciations['rentabilite'] = 'Bonne rentabilité';
+    } else {
+        $appreciations['rentabilite'] = 'Rentabilité à améliorer';
+    }
+
+    // Tendance production
+    $recentQuantities = array_slice($stats['daily']['quantities']->toArray(), 0, 3);
+    if (array_sum($recentQuantities) > 0) {
+        $appreciations['tendance'] = 'Production en hausse';
+    } else {
+        $appreciations['tendance'] = 'Production en baisse';
+    }
+
+    return $appreciations;
+}
+}
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\ProfileUpdateRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\View\View;
+
+class ProfileController extends Controller
+{
+    /**
+     * Display the user's profile form.
+     */
+    public function edit(Request $request): View
+    {
+        return view('profile.edit', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    /**
+     * Update the user's profile information.
+     */
+    public function update(ProfileUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated());
+
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
+        }
+
+        $request->user()->save();
+
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    /**
+     * Delete the user's account.
+     */
+    public function destroy(Request $request): RedirectResponse
+    {
+        $request->validateWithBag('userDeletion', [
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return Redirect::to('/');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Matiere;
+use App\Models\Produit_fixes;
+use App\Models\MatiereRecommander;
+use App\Services\RecipeCalculatorService;
+use App\Enums\UniteMinimale;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class RecetteController extends Controller
+{
+    protected $calculator;
+
+    public function __construct(RecipeCalculatorService $calculator)
+    {
+        $this->calculator = $calculator;
+    }
+
+    public function index()
+    {
+        $employe = auth()->user();
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        $produits = Produit_fixes::all();
+
+        return view('pages.recettes.index', [
+            'produits' => $produits,
+            'nom' => $employe->name,
+            'secteur' => $employe->secteur,
+            'unites' => UniteMinimale::cases()
+        ]);
+    }
+
+    public function create()
+    {
+        $employe = auth()->user();
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        $role = $employe->role === 'patissier' ? 'patisserie' :
+               ($employe->role === 'boulanger' ? 'boulangerie' : '');
+
+        return view('pages.recettes.create', [
+            'produits' => Produit_fixes::all(),
+            'matieres' => Matiere::all(),
+            'unites' => UniteMinimale::cases(),
+            'nom' => $employe->name,
+            'secteur' => $employe->secteur
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            $request->validate([
+                'produit' => 'required|exists:Produit_fixes,code_produit',
+                'quantitep' => 'required|integer|min:1',
+                'matieres' => 'required|array',
+                'matieres.*.matiere_id' => 'required|exists:Matiere,id',
+                'matieres.*.quantite' => 'required|numeric|min:0',
+                'matieres.*.unite' => 'required|string'
+            ]);
+
+            foreach ($request->matieres as $matiere) {
+                MatiereRecommander::create([
+                    'produit' => $request->produit,
+                    'matierep' => $matiere['matiere_id'],
+                    'quantitep' => $request->quantitep,
+                    'quantite' => $matiere['quantite'],
+                    'unite' => $matiere['unite']
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('recettes.index')->with('success', 'Recette ajoutée avec succès');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Erreur lors de l\'ajout de la recette: ' . $e->getMessage());
+        }
+    }
+
+    public function calculateIngredients(Request $request)
+    {
+        $request->validate([
+            'produit_id' => 'required|exists:Produit_fixes,code_produit',
+            'quantite_cible' => 'required|numeric|min:0'
+        ]);
+
+        $recette = MatiereRecommander::where('produit', $request->produit_id)
+            ->with('matiere')
+            ->get()
+            ->groupBy('produit')
+            ->map(function ($ingredients) {
+                return [
+                    'quantitep' => $ingredients->first()->quantitep,
+                    'ingredients' => $ingredients->map(function ($ingredient) {
+                        return [
+                            'nom' => $ingredient->matiere->nom,
+                            'quantite' => $ingredient->quantite,
+                            'unite' => $ingredient->unite
+                        ];
+                    })->toArray()
+                ];
+            })
+            ->first();
+
+        if (!$recette) {
+            return response()->json(['error' => 'Recette non trouvée'], 404);
+        }
+
+        $ingredients = $this->calculator->calculateAllIngredientsForRecipe(
+            $recette,
+            $request->quantite_cible
+        );
+
+        return response()->json(['ingredients' => $ingredients]);
+    }
+    public function destroy($produitId)
+{
+    try {
+        DB::beginTransaction();
+
+        $recettes = MatiereRecommander::where('produit', $produitId)->get();
+
+        if ($recettes->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Recette non trouvée'
+            ], 404);
+        }
+
+        MatiereRecommander::where('produit', $produitId)->delete();
+
+        DB::commit();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Recette supprimée avec succès'
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Erreur lors de la suppression: ' . $e->getMessage()
+        ], 500);
+    }
+}
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ReposConge;
+use App\Models\User;
+use App\Services\DayService;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+
+class ReposCongeController extends Controller
+{
+    protected $dayService;
+
+    public function __construct(DayService $dayService)
+    {
+        $this->dayService = $dayService;
+    }
+
+    public function index()
+    {
+        $nom = auth()->user()->name;
+        $role = auth()->user()->role;
+        $employes = User::all();
+        $reposConges = ReposConge::with('employe')->get();
+
+        return view('repos-conges.index', compact('employes', 'reposConges','nom','role'));
+    }
+
+    public function show()
+    {
+        $reposConge = ReposConge::where('employe_id', auth()->id())->first();
+        $jourNumber = $reposConge ? $this->dayService->getDayNumber($reposConge->jour) : null;
+
+        return view('repos-conges.employee', compact('reposConge', 'jourNumber'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'employe_id' => 'required|exists:users,id',
+            'jour' => 'required|in:' . implode(',', $this->dayService->getAllDays()),
+            'conges' => 'nullable|integer|min:1',
+            'debut_c' => 'nullable|date',
+            'raison_c' => 'nullable|in:maladie,evenement,accouchement,autre',
+            'autre_raison' => 'nullable|required_if:raison_c,autre|string|max:255',
+        ]);
+
+        ReposConge::updateOrCreate(
+            ['employe_id' => $request->employe_id],
+            $validated
+        );
+
+        return redirect()->route('repos-conges.index')
+            ->with('success', 'Informations enregistrées avec succès');
+    }
+
+    public function update(Request $request, ReposConge $reposConge)
+    {
+        $validated = $request->validate([
+            'jour' => 'required|in:' . implode(',', $this->dayService->getAllDays()),
+            'conges' => 'nullable|integer|min:1',
+            'debut_c' => 'nullable|date',
+            'raison_c' => 'nullable|in:maladie,evenement,accouchement,autre',
+            'autre_raison' => 'nullable|required_if:raison_c,autre|string|max:255',
+        ]);
+
+        $reposConge->update($validated);
+
+        return redirect()->route('repos-conges.index')
+            ->with('success', 'Informations mises à jour avec succès');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Matiere;
+use App\Models\ReservationMp;
+use App\Services\UniteConversionService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class ReservationMpController extends Controller
+{
+    protected $uniteConversionService;
+
+    public function __construct(UniteConversionService $uniteConversionService)
+    {
+        $this->uniteConversionService = $uniteConversionService;
+    }
+
+    public function index()
+    {
+        $employe = auth()->user();
+        $nom = $employe->name;
+        $role = $employe->role;
+        $reservations = ReservationMp::with(['producteur', 'matiere'])
+            ->where('statut', 'en_attente')
+            ->get();
+        $matieres = Matiere::all();
+
+        return view('pages.chef_production.gestion_reservation', compact('reservations','matieres','nom','role'));
+    }
+
+    public function create()
+    {
+        $matieres = Matiere::all();
+        return view('pages.producteur.reserver-mp', compact('matieres'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'matiere_id' => 'required|exists:Matiere,id',
+            'quantite_demandee' => 'required|numeric|min:0.001',
+            'unite_demandee' => 'required|string'
+        ]);
+
+        $reservation = new ReservationMp($validated);
+        $reservation->producteur_id = Auth::id();
+        $reservation->save();
+
+        return redirect()->back()->with('success', 'Demande de réservation envoyée avec succès');
+    }
+
+    public function validerReservation(Request $request, ReservationMp $reservation)
+    {
+        $matiere = $reservation->matiere;
+
+       $quantiteMinimale = $this->uniteConversionService->convertir(
+            $reservation->quantite_demandee,
+            $reservation->unite_demandee,
+            $matiere->unite_minimale
+        );
+
+        // Calculer la quantité à déduire en unités classiques
+        /*$quantiteADeduire = $quantiteMinimale / $matiere->quantite_par_unite;*/
+        $quantiteADeduire = $quantiteMinimale/($matiere->quantite_par_unite*1000);
+
+
+        // Vérifier si la quantité est disponible
+        if ($matiere->quantite < $quantiteADeduire) {
+            return redirect()->back()->with('error', 'Stock insuffisant');
+        }
+
+        // Mettre à jour le stock
+        $matiere->quantite -= $quantiteADeduire;
+        $matiere->save();
+
+        // Approuver la réservation
+        $reservation->statut = 'approuvee';
+        $reservation->save();
+
+        return redirect()->back()->with('success', 'Réservation approuvée avec succès');
+    }
+
+    public function refuserReservation(Request $request, ReservationMp $reservation)
+    {
+        $validated = $request->validate([
+            'commentaire' => 'required|string|max:255'
+        ]);
+
+        $reservation->statut = 'refusee';
+        $reservation->commentaire = $validated['commentaire'];
+        $reservation->save();
+
+        return redirect()->back()->with('success', 'Réservation refusée');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Salaire;
+use App\Models\AvanceSalaire;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class SalaireController extends Controller
+{
+    public function reclamerAs()
+    {
+        $employe = auth()->user();
+
+        if(!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        // Vérification de la date
+        if (now()->day < 9) {
+            return view('pages.error_as', [
+                'error' => 'Vous ne pouvez pas réclamer l\'AS avant le 9 de chaque mois',
+                'hasRequest' => false
+            ]);
+        }
+
+        // Vérification si l'employé a déjà une avance ce mois-ci
+        $hasRequest = AvanceSalaire::where('id_employe', $employe->id)
+            ->whereMonth('mois_as', now()->month)
+            ->exists();
+
+        if ($hasRequest) {
+            return view('pages.error_as', [
+                'error' => 'Vous avez déjà soumis une demande pour ce mois-ci',
+                'hasRequest' => true
+            ]);
+        }
+
+        // Si toutes les conditions sont satisfaites
+        $as = new AvanceSalaire();
+        return view('salaires.reclamer-as', compact('as'));
+    }
+
+    public function store_demandes_AS(Request $request)
+    {
+        $request->validate([
+            'sommeAs' => 'required|numeric|min:0'
+        ]);
+
+        $salaire = Salaire::where('id_employe', Auth::id())->first();
+
+        if (!$salaire) {
+            return redirect()->back()->with('error', 'Aucun salaire trouvé.');
+        }
+
+        $sommeRestante = $salaire->somme - $request->sommeAs;
+
+        if ($sommeRestante < 5000) {
+            return redirect()->back()->with('error', 'Le montant demandé est trop élevé.');
+        }
+
+        AvanceSalaire::create([
+            'id_employe' => Auth::id(),
+            'sommeAs' => $request->sommeAs,
+            'flag' => false,
+            'mois_as' => now()
+        ]);
+
+        return redirect()->route('voir-status')->with('success', 'Demande envoyée avec succès.');
+    }
+
+    public function voir_Status()
+    {
+        $as = AvanceSalaire::where('id_employe', Auth::id())
+            ->whereMonth('created_at', now()->month)
+            ->first();
+
+        return view('salaires.status', compact('as'));
+    }
+
+    public function validerAs()
+    {
+
+        $demandes = AvanceSalaire::with('employe')
+            ->where('flag', false)
+            ->get();
+
+        return view('salaires.valider-as', compact('demandes'));
+    }
+
+    public function store_validation(Request $request)
+    {
+
+        $request->validate([
+            'as_id' => 'required|exists:avance_salaires,id',
+            'decision' => 'required|boolean'
+        ]);
+
+        $as = AvanceSalaire::findOrFail($request->as_id);
+        $as->flag = $request->decision;
+        $as->save();
+
+        return redirect()->back()->with('success', 'Décision enregistrée.');
+    }
+
+    public function validation_retrait()
+    {
+        $as = AvanceSalaire::where('id_employe', Auth::id())
+            ->where('flag', true)
+            ->where('retrait_valide', false)
+            ->first();
+
+        return view('salaires.validation-retrait', compact('as'));
+    }
+
+    public function recup_retrait(Request $request)
+    {
+        $as = AvanceSalaire::findOrFail($request->as_id);
+        $as->retrait_demande = true;
+        $as->save();
+
+        return redirect()->back()->with('success', 'Demande de retrait enregistrée.');
+    }
+
+    public function valider_retraitcp()
+    {
+
+        $demandes = AvanceSalaire::with('employe')
+            ->where('retrait_demande', true)
+            ->where('retrait_valide', false)
+            ->get();
+
+        return view('salaires.valider-retrait-cp', compact('demandes'));
+    }
+
+    public function recup_retrait_cp(Request $request)
+    {
+
+        $as = AvanceSalaire::findOrFail($request->as_id);
+        $as->retrait_valide = true;
+        $as->save();
+
+        // Mise à jour du salaire
+        $user = User::find($as->id_employe);
+        $user->avance_salaire += $as->sommeAs;
+        $user->save();
+
+        $salaire = Salaire::where('id_employe', $as->id_employe)->first();
+        $salaire->somme_effective_mois -= $as->sommeAs;
+        $salaire->save();
+
+        return redirect()->back()->with('success', 'Retrait validé avec succès.');
+    }
+
+    public function form_salaire()
+    {
+
+        $employes = User::all();
+        return view('salaires.form', compact('employes'));
+    }
+
+    public function store_salaire(Request $request)
+    {
+
+        $request->validate([
+            'id_employe' => 'required|exists:users,id',
+            'somme' => 'required|numeric|min:0'
+        ]);
+
+        Salaire::updateOrCreate(
+            ['id_employe' => $request->id_employe],
+            [
+                'somme' => $request->somme,
+                'somme_effective_mois' => $request->somme
+            ]
+        );
+
+        return redirect()->back()->with('success', 'Salaire enregistré avec succès.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\ProduitRecu;
+use App\Models\Produit_fixes;
+use App\Models\Production;
+use App\Models\User;
+use App\Models\VersementCsg;
+use App\Models\VersementChef;
+use App\Models\TransactionVente;
+use App\Models\Production_suggerer_par_jour;
+use Carbon\Carbon;
+class ServeurController extends Controller
+{
+    public function dashboard() {
+        $employe = auth()->user();
+
+         if (!$employe) {
+           return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        $nom = $employe->name;
+        $produits = ProduitRecu::latest()->get();
+        $proV=TransactionVente::latest()->get();
+        $produitInv=TransactionVente::latest()->get();
+        $Versement=VersementCsg::latest()->get();
+        $user = User::where('id', $employe->id)->first();
+        $heure_actuelle = now();
+        $heure_actuelle->setTimezone('UTC');
+
+        return view('pages/serveur/serveur_dashboard',['produits' => $produits,'proV'=>$proV,'produitInv'=>$produitInv,'Versement'=>$Versement,'user'=>$user, 'nom'=>$user->name,'heure_actuelle' => $heure_actuelle]);
+    }
+
+    public function store(Request $request) {
+        try {
+            // Validation
+            $validate = $request->validate([
+                'pointeur' => 'required',
+                'produit' => 'required',
+                'prix' => 'required|numeric|min:0',
+                'quantite' => 'required|numeric|min:1',
+                'date' => 'required|date',
+            ]);
+
+            // Création du produit
+            $produit = ProduitRecu::create($validate);
+
+            // Réponse JSON en cas de succès
+            return response()->json([
+                'success' => true,
+                'message' => 'Produit ajouté avec succès',
+                'data' => $produit
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Réponse JSON en cas d'erreur de validation
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Exception $e) {
+            // Réponse JSON en cas d'erreur générale
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de l\'ajout du produit',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function ajouterProduit_recu(){
+        $employe = auth()->user();
+
+        if (!$employe) {
+          return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+       }
+       $nom = $employe->name;
+        $employe = auth()->user();
+
+        if (!$employe) {
+          return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        $Employe=User::where('role','pointeur')->get();
+        $produitR=Produit_fixes::all();
+        $produits = \DB::table('Produit_recu')
+        ->join('Produit_fixes', 'Produit_recu.produit', '=', 'Produit_fixes.code_produit')
+        ->join('users', 'Produit_recu.pointeur', '=', 'users.id')
+        ->select(
+            'Produit_recu.*',
+            'Produit_fixes.nom as nom',
+            'Produit_fixes.prix as prix',
+            'users.name as pointeur'
+        )
+        ->orderBy('Produit_recu.code_produit', 'desc') // Assurez-vous que la colonne date existe dans la table 'Produit_recu'
+        ->get();
+
+
+
+        $heure_actuelle = now();
+        $heure_actuelle->setTimezone('UTC');
+        return view('pages/serveur/serveur-ajouterProduit_recu',compact('Employe','produitR','produits','heure_actuelle','nom'));
+
+    }
+
+    public function store_vendu(Request $request) {
+        $employe = auth()->user();
+
+        if (!$employe) {
+          return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+         try {
+            $validated = $request->validate([
+                'produit' => 'required|exists:Produit_fixes,code_produit',
+                 'quantite' => 'required|numeric|min:1',
+                 'prix' => 'required|numeric|min:0',
+                 'type'=>'required',
+                 'monnaie'=>'required',
+                ]);
+            $produitR = Produit_fixes::where('code_produit',$request->produit)->first();
+            if ($produitR->prix != $request->prix) {
+                session()->flash('error', "Le prix saisi ne correspond pas au prix réel du produit sélectionné. Le prix doit être de {$produitR->prix_unitaire}.");
+                return back();
+            }
+            $quantiteDisponible = $produitR->productions->sum('quantite');
+             if($quantiteDisponible <= $request->quantite) {
+                 return back()->with('error', 'Stock insuffisant pour la vente'); }
+
+                    $quantiteRestante = $request->quantite;
+                     foreach($produitR->productions as $production) {
+                        if($quantiteRestante <= 0) break;
+                         $reduction = min($production->quantite, $quantiteRestante);
+                         $production->quantite -= $reduction;
+                          $production->save();
+                          $quantiteRestante -= $reduction; }
+                          $proV= TransactionVente::create([
+                           'produit'=>$request->produit,
+                            'serveur'=>$employe->id,
+                            'quantite'=>$request->quantite,
+                            'prix'=>$request->prix,
+
+                            'date_vente'=>Carbon::now(),
+                            'type'=>$request->type,
+                            'monnaie'=>$request->monnaie
+
+                        ]);
+                                return redirect()->route('serveur-dashboard')->with('success', 'Vente enregistrée avec succès');
+                             }
+                                 catch(\Exception $e) {
+                                    return back()->with('error', 'Une erreur est survenue lors de l\'enregistrement: ' . $e->getMessage());
+                                 }
+                                 }
+    public function enrProduit_vendu(){
+        $employe = auth()->user();
+        $nom = $employe->name;
+        if (!$employe) {
+          return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+        $produitR=Produit_fixes::all();
+        $proV=\DB::table('transaction_ventes')
+        ->join('Produit_fixes','transaction_ventes.produit','=','Produit_fixes.code_produit')
+        ->join('users', 'transaction_ventes.serveur', '=', 'users.id')
+        ->select('transaction_ventes.*',
+                'Produit_fixes.nom as produit',
+                'Produit_fixes.prix as prix'
+        )
+        ->where('transaction_ventes.type','=','Vente')
+        ->where('transaction_ventes.serveur','=',$employe->id)
+        ->get();
+        $heure_actuelle = now();
+        $heure_actuelle->setTimezone('UTC');
+        return view('pages/serveur/serveur-enrProduit_vendu',compact('produitR','proV','heure_actuelle','nom'));
+    }
+    public function store_invendu(Request $request){
+        // Get the authenticated employee
+        $employe = auth()->user();
+
+        // Check if employee is authenticated, else redirect to login page
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        try {
+            // Validate input data
+            $validated = $request->validate([
+                'produit' => 'required|exists:Produit_fixes,code_produit',
+                'quantite' => 'required|numeric|min:1',
+                'prix' => 'required|numeric|min:0',
+                'type' => 'required|string',
+            ]);
+
+            // Create a new instance of TransactionVente
+            $produitInv = new TransactionVente();
+
+            // Manually set values for the TransactionVente fields
+            $produitInv->produit = $request->produit;
+            $produitInv->serveur = $employe->id;
+            $produitInv->quantite = $request->quantite;
+            $produitInv->prix = $request->prix;
+            $produitInv->type = $request->type;
+            $produitInv->monnaie = 'fcfa';
+            $produitInv->date_vente = now();  // Explicitly set 'date_vente'
+
+            // Save the instance to the database
+            $produitInv->save();
+
+            // Redirect with success message
+            return redirect()->back()->with('success', 'Produit Invendu enregistré avec succès');
+        } catch (\Exception $e) {
+            // Error handling
+            return back()->with('error', 'Une erreur est survenue lors de l\'enregistrement: ' . $e->getMessage());
+        }
+    }
+
+
+
+        public function produit_invendu(){
+            $employe = auth()->user();
+            $nom = $employe->name;
+            $produitR=Produit_fixes::all();
+            $heure_actuelle = now();
+            $heure_actuelle->setTimezone('UTC');
+            $proV=\DB::table('transaction_ventes')
+        ->join('Produit_fixes','transaction_ventes.produit','=','Produit_fixes.code_produit')
+        ->join('users', 'transaction_ventes.serveur', '=', 'users.id')
+        ->select('transaction_ventes.*',
+                'Produit_fixes.nom as produit',
+                'Produit_fixes.prix as prix'
+        )
+        ->where('transaction_ventes.type','=','Vente')
+        ->where('transaction_ventes.serveur','=',$employe->id)
+        ->get();
+            return view('pages/serveur/serveur-produit_invendu',compact('proV','produitR','heure_actuelle','nom'));
+        }
+        public function store_versement(Request $request){
+            $employe = auth()->user();
+
+        if (!$employe) {
+          return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+            $validated= $request->validate([
+                'libelle'=>'required',
+                'date'=>'required',
+               'somme'=>'required',
+               'encaisseur'=>'required|exists:users,id',
+             ]);
+              $Versement=VersementCsg::create([
+                'libelle'=>$request->libelle,
+                'date'=>$request->date,
+                'somme'=>$request->somme,
+                'verseur'=>$employe->id,
+                'encaisseur'=>$request->encaisseur,
+
+              ]);
+              return redirect()->route('serveur-dashboard')->with('success', 'Versement effectues avec succès');
+        }
+        public function versement(){
+            $versement=User::where('role','chef_production')->get();
+            $heure_actuelle = now();
+            $heure_actuelle->setTimezone('UTC');
+            return view('pages/serveur/serveur-versement_cp',compact('versement','heure_actuelle'));
+        }
+        public function fiche_versement(){
+         $employe = auth()->user();
+
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter');
+        }
+
+        // Obtenir le premier et dernier jour du mois courant
+        $debut_mois = now()->startOfMonth();
+        $fin_mois = now()->endOfMonth();
+
+        // Récupérer  les versements du mois pour tous les produits
+
+        $versements_mois = VersementCsg::where('verseur', $employe->id)
+            ->whereBetween('created_at', [$debut_mois, $fin_mois])
+            ->get()
+            ->groupBy('produit');
+
+        // Collection pour stocker les statistiques des versements
+        $statistiques_versements = collect();
+
+        foreach ($versements_mois as $code_vcsg => $versement_csgs) {
+            // Obtenir les informations du versement
+            $verseM = VersementCsg::where('code_vcsg', $code_vcsg)->first();
+
+            if ($verseM) {
+                // Calculer les statistiques pour ce versement
+                $montant_totale = $versement_csgs->sum('somme');
+                // Grouper par jour pour voir l'évolution
+                $versements_par_jour = $versement_csgs
+                    ->groupBy(function($versement){
+                        return $versement->created_at->format('Y-m-d');
+                    })
+                    ->map(function($groupe) {
+                        return $groupe->sum('somme');
+                    });
+
+                // Calculer la moyenne journalière
+                $moyenne_journaliere = $montant_totale / max($versements_par_jour->count(),1);
+
+                // Trouver le jour avec le versement maximale
+                $jour_max_versement = $versements_par_jour->max();
+                $date_max_versement = $versements_par_jour
+                    ->filter(function($somme) use ($jour_max_versement) {
+                        return $somme == $jour_max_versement;
+                    })
+                    ->keys()
+                    ->first();
+
+                $statistiques_versements->push([
+                    'libelle' => $verseM->libelle,
+                    'code_vcsg' => $code_vcsg,
+                    'montant_totale' => $montant_totale,
+                    'moyenne_journaliere' => round($moyenne_journaliere, 2),
+                    'versement_max' => [
+                        'somme' => $jour_max_versement,
+                        'date' => $date_max_versement
+                    ],
+                    'versements_journalieres' => $versements_par_jour->toArray(),
+                ]);
+            }
+        }
+
+        // Récupérer les informations de l'employé
+        $info = User::where('id', $employe->id)->first();
+
+        // Retour correct pour la vue avec un tableau de données
+        return view('pages\serveur\ serveur-fiche_versement', [
+            'statistiques' => $statistiques_versements->toArray(),
+            'mois_actuel' => now()->format('F Y'),
+            'debut_mois' => $debut_mois->format('Y-m-d'),
+            'fin_mois' => $fin_mois->format('Y-m-d'),
+            'nom' => $info->name,
+            'secteur' => $info->secteur,
+            'num_tel' => $info->num_tel,
+        ]);
+        }
+
+
+            public function stats($period = 'current')
+            {
+                $nom = auth()->user()->name;
+                // Calcul des plages de dates en fonction de la période
+
+                $startDate = now()->startOfMonth();
+                $endDate = now()->endOfMonth();
+
+                if ($period === 'last') {
+                    $startDate = now()->subMonth()->startOfMonth();
+                    $endDate = now()->subMonth()->endOfMonth();
+                } elseif ($period === '3months') {
+                    $startDate = now()->subMonths(3)->startOfMonth();
+                    $endDate = now()->endOfMonth();
+                }
+
+                // Récupérer les produits avec leurs données de réception et de vente dans la période donnée
+                $produits = Produit_fixes::with(['receptions' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }, 'ventes' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }])->get();
+
+                // Calcul des statistiques pour chaque produit
+                $stats = $produits->map(function ($produit) {
+                    $receptionsVentes=$produit->receptions->filter(function($reception){
+                         return $reception->type=='Vente';
+                    });
+                    $receptionsRecu=$produit->receptions(function($reception){
+                        return $reception;
+                   });
+
+                    $receptionsInVendu=$produit->receptions->filter(function($reception){
+                        return $reception->type=='Produit invendu';
+                   });
+                   $InVendu=$produit->ventes->filter(function($vente){
+                    return $vente->type=='Produit invendu';
+               });
+               $Vendu=$produit->ventes->filter(function($vente){
+                return $vente->type=='Vente';
+                 });
+                $Avarie=$produit->ventes->filter(function($avarie){
+                    return $avarie->type=='Produit Avarie';
+                });
+                    $totalRecu = $produit->receptions->sum(function ($reception) {
+                        return $reception->prix * $reception->quantite;
+                    });
+
+                    $totalVendu = $Vendu->sum(function ($vente) {
+                        return $vente->prix * $vente->quantite;
+                    });
+
+                    $quantiteRecu = $produit->receptions->sum('quantite');
+                    $quantiteVendue = $Vendu->sum('quantite');
+                    $quantiteInVendue = $InVendu->sum('quantite');
+                    $quantiteAvarie=$Avarie->sum('quantite');
+                    $qte=$quantiteVendue+$quantiteInVendue+$quantiteAvarie-$quantiteRecu;
+                    $totalManquant=($qte * $Avarie->sum('prix'));
+
+                    $perte = $Avarie->sum(function($avarie){
+                        return ($avarie->prix*$avarie->quantite);
+                       });
+
+                    return [
+                        'nom' => $produit->nom,
+                        'quantite_recue' => $quantiteRecu,
+                        'quantite_vendue' => $quantiteVendue,
+                        'quantite_invendu'=>$quantiteInVendue,
+                        'total_recu' => $totalRecu,
+                        'total_vendu' => $totalVendu,
+                        'ttavarie'=>$totalManquant,
+                        'perte' => $perte,
+                    ];
+                });
+                $dailyStats = [];
+                foreach ($produits as $produit) {
+                    foreach ($produit->ventes as $vente) {
+                        $day = $vente->created_at->format('Y-m-d');
+                        $type = $vente->type;
+
+                        if (!isset($dailyStats[$day])) {
+                            $dailyStats[$day] = [
+                                'recus' => [],
+                                'vendus' => [],
+                                'avarie' => [],
+                                'manquants' => 0,
+                            ];
+                        }
+
+                        if ($type === 'Vente') {
+                            $dailyStats[$day]['vendus'][] = $produit->nom;
+                        } elseif ($type === 'Produit Avarie') {
+                            $dailyStats[$day]['avarie'][] = $produit->nom;
+                            $dailyStats[$day]['manquants'] = -1*($vente->prix * $vente->quantite);
+                        } else {
+                            $dailyStats[$day]['recus'][] = $produit->nom;
+                        }
+                    }
+                }
+
+                // Calcul des totaux globaux
+                $totalProducts = $stats->sum('quantite_recue');
+                $totalSold = $stats->sum('quantite_vendue');
+                $totalNoSold=$stats->sum('quantite_invendu');
+                $totalCost = $stats->sum('total_recu');
+                $totalRevenue = $stats->sum('total_vendu');
+                $ttavarie=$stats->sum('ttavarie');
+                $totalLosses = $stats->sum('perte');
+
+                return view('pages/serveur/serveur-stats', compact(
+                    'stats',
+                    'totalProducts',
+                    'totalSold',
+                    'totalNoSold',
+                    'totalCost',
+                    'totalRevenue',
+                    'ttavarie',
+                    'totalLosses',
+                    'period',
+                    'dailyStats',
+                    'nom'
+                ));
+            }
+
+        public function statistique(){
+            $produits = \DB::table('transaction_ventes')
+            ->join('Produit_fixes', 'transaction_ventes.produit', '=', 'Produit_fixes.code_produit')
+            ->select(
+                'Produit_fixes.nom as produit_nom',
+                \DB::raw('SUM(CASE WHEN transaction_ventes.type = "Vente" THEN transaction_ventes.quantite ELSE 0 END) as total_quantite_vendu'),
+                \DB::raw('SUM(CASE WHEN transaction_ventes.type = "Produit invendu" THEN transaction_ventes.quantite ELSE 0 END) as total_quantite_invendu')
+            )
+            ->groupBy('Produit_fixes.nom')
+            ->get();
+            $ventesParJour = \DB::table('transaction_ventes')
+            ->select(
+                \DB::raw('DATE(created_at) as date'),
+                \DB::raw('SUM(CASE WHEN type = "Vente" THEN quantite ELSE 0 END) as ventes'),
+                \DB::raw('SUM(CASE WHEN type = "Produit invendu" THEN quantite ELSE 0 END) as invendus')
+            )
+            ->groupBy(\DB::raw('DATE(created_at)'))
+            ->orderBy('date', 'asc')
+            ->get();
+            $employe = auth()->user();
+            $nom = $employe->nom;
+
+
+
+
+    // Récupérer les ventes du mois
+    $currentMonth = now()->month;
+    $salesData = \DB::table('transaction_ventes')
+        ->join('Produit_fixes', 'transaction_ventes.produit', '=', 'Produit_fixes.code_produit')
+        ->whereMonth('transaction_ventes.date_vente', $currentMonth)
+        ->select('Produit_fixes.nom', \DB::raw('SUM(transaction_ventes.quantite) as total_vendu'))
+        ->groupBy('Produit_fixes.nom')
+        ->get();
+
+    // Préparer les données pour le graphique
+    $productNames = $salesData->pluck('nom')->toArray();
+    $productSales = $salesData->pluck('total_vendu')->toArray();
+
+        return view('pages/serveur/serveur-stats-produit', compact('produits','ventesParJour','productNames','productSales','nom'));
+        }
+        public function classement()
+    {
+        $classements = \DB::table('transaction_ventes')
+        ->join('users', 'transaction_ventes.serveur', '=', 'users.id')
+        ->select('users.name', \DB::raw('SUM(transaction_ventes.prix * transaction_ventes.quantite) as total_ventes'))
+        ->where('transaction_ventes.type', 'vente')
+        ->whereMonth('transaction_ventes.created_at', now()->month)
+        ->whereYear('transaction_ventes.created_at', now()->year)
+        ->groupBy('users.id', 'users.name')
+        ->orderBy('total_ventes', 'desc')
+        ->get();
+
+        return view('pages/serveur/serveur-classement', ['classements' => $classements]);
+    }
+
+
+    public function rapportVente()
+    {
+        $employe = auth()->user();
+
+        if (!$employe) {
+            return redirect()->route('login')->with('error', 'Veuillez vous connecter.');
+        }
+
+        // Filtrer les ventes par mois et serveur connecté
+        $currentMonth = now()->format('m');
+        $ventes = \DB::table('transaction_ventes')
+            ->join('Produit_fixes', 'transaction_ventes.produit', '=', 'Produit_fixes.code_produit')
+            ->select('Produit_fixes.nom as produit', 'transaction_ventes.quantite', 'transaction_ventes.prix', 'transaction_ventes.date_vente')
+            ->whereMonth('transaction_ventes.date_vente', $currentMonth)
+            ->where('transaction_ventes.serveur', $employe->id)
+            ->where('transaction_ventes.type', 'Vente')
+            ->get();
+
+        // Calculer la recette totale
+        $recetteTotale = $ventes->sum(function ($vente) {
+            return $vente->quantite * $vente->prix;
+        });
+
+        return view('pages/serveur/serveur-rapport', compact('employe', 'ventes', 'recetteTotale'));
+    }
+
+    public function recupererInvendus(Request $request)
+    {
+        // Récupérer la date d'hier
+        $hier = now()->subDay()->format('Y-m-d');
+
+        // Récupérer les produits invendus d'hier
+        $invendus = TransactionVente::where('type', 'Produit invendu')
+        ->whereDate('created_at', $hier)
+        ->get();
+
+    // Vérifier s'il y a des invendus
+    if ($invendus->isEmpty()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Aucun produit invendu  hier trouvé.'
+        ]);
+    }
+        foreach ($invendus as $produit) {
+            // Ajouter le produit à la table produit_recu
+            ProduitRecu::create([
+                'pointeur' => $produit->serveur, // On stocke le serveur qui a pointé les invendus
+                'produit' => $produit->produit,
+                'quantite' => $produit->quantite,
+                'prix' => $produit->prix,
+            ]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Les produits invendus ont été récupérés avec succès.']);
+    }
+    /**************************************** */
+    public function store_versement_cp(Request $request){
+          return redirect()->route('serveur-dashboard')->with('success', 'Versement effectues avec succès');
+    }
+    /**************************************** */
+
+    public function versement_cp(){
+        $versement=User::where('role','chef_production')->get();
+        $heure_actuelle = now();
+        $heure_actuelle->setTimezone('UTC');
+        return view('pages.serveur.serveur-versement_cp',compact('versement','heure_actuelle'));
+    }
+    public function aide(){
+        return view('pages/serveur/serveur-aide');
+    }
+ public function nbre_sacs(Request $request){
+    $request->validate=([
+   'quantite'=>'required',
+   'sac'=>'required'
+    ]);
+    TransactionVente::create([
+    'quantite'=>$request->quantite,
+    'type'=>$request->sac
+    ]);
+ return redirect()->route('serveur-dashboard');
+ }
+   public function nbre_sacs_vente(){
+    $nom=auth()->user()->name;
+    return view('pages/serveur/serveur-sac',compact('nom'));
+    }
+
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Matiere;
+use App\Models\ProduitRecu;
+use App\Models\ProduitFixe;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+class StockController extends Controller
+{
+
+    public function index()
+    {
+        $employe = auth()->user();
+        if (!$employe) {
+            return redirect()->route('login');
+        }
+
+        $nom = $employe->name;
+        $role = $employe->role;
+
+        // Récupérer les matières premières
+        $matieres = Matiere::orderBy('quantite', 'desc')->get();
+
+        // Récupérer les stocks de produits
+        $produits = DB::table('produit_stocks')
+            ->select(
+                'Produit_fixes.code_produit',
+                'Produit_fixes.nom',
+                'Produit_fixes.categorie',
+                'produit_stocks.quantite_en_stock as quantite_totale',
+                'produit_stocks.quantite_invendu',
+                'produit_stocks.quantite_avarie',
+                DB::raw('(SELECT prix FROM Produit_recu WHERE produit = Produit_fixes.code_produit ORDER BY date DESC LIMIT 1) as prix_recent')
+            )
+            ->join('Produit_fixes', 'produit_stocks.id_produit', '=', 'Produit_fixes.code_produit')
+            ->orderBy('quantite_en_stock', 'desc')
+            ->get();
+
+        // Statistiques matières premières
+        $matiere_max = $matieres->first();
+        $total_matieres = $matieres->count();
+        $valeur_stock_matieres = $matieres->sum(function($matiere) {
+            return $matiere->quantite * $matiere->prix_unitaire;
+        });
+
+        // Statistiques produits
+        $produit_max = $produits->first();
+        $total_produits = $produits->count();
+        $valeur_stock_produits = $produits->sum(function($produit) {
+            return $produit->quantite_totale * ($produit->prix_recent ?? 0);
+        });
+
+        // Préparation des données pour les graphiques avec limitation aux top 10
+        $produits_for_chart = $produits->take(10);
+
+        $data_matieres = [
+            'labels' => $matieres->take(10)->pluck('nom'),
+            'data' => $matieres->take(10)->pluck('quantite'),
+        ];
+
+        $data_produits = [
+            'labels' => $produits_for_chart->pluck('nom'),
+            'data' => $produits_for_chart->pluck('quantite_totale'),
+        ];
+
+        // Ajout des statistiques supplémentaires
+        $stats = [
+            'produits_par_categorie' => $produits->groupBy('categorie')
+                ->map(function($group) {
+                    return [
+                        'quantite_totale' => $group->sum('quantite_totale'),
+                        'valeur_totale' => $group->sum(function($item) {
+                            return $item->quantite_totale * ($item->prix_recent ?? 0);
+                        }),
+                        'nombre_produits' => $group->count()
+                    ];
+                }),
+        ];
+
+        return view('stock.index', compact(
+            'matieres',
+            'produits',
+            'matiere_max',
+            'produit_max',
+            'total_matieres',
+            'total_produits',
+            'valeur_stock_matieres',
+            'valeur_stock_produits',
+            'data_matieres',
+            'data_produits',
+            'nom',
+            'role',
+            'stats'
+        ));
+    }
+
+    public function adjustProduitQuantity(Request $request, $produit)
+    {
+        $validated = $request->validate([
+            'quantite' => 'required|numeric',
+            'operation' => 'required|in:add,subtract'
+        ]);
+
+        // Récupérer ou créer le stock du produit
+        $stock = ProduitStock::firstOrCreate(
+            ['id_produit' => $produit],
+            ['quantite_en_stock' => 0, 'quantite_invendu' => 0, 'quantite_avarie' => 0]
+        );
+
+        // Calculer la nouvelle quantité
+        $adjustmentQuantity = $validated['quantite'];
+        $newQuantity = $validated['operation'] === 'add'
+            ? $stock->quantite_en_stock + $adjustmentQuantity
+            : $stock->quantite_en_stock - $adjustmentQuantity;
+
+        if ($newQuantity < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stock insuffisant pour cette opération'
+            ], 422);
+        }
+
+        // Mettre à jour le stock
+        $stock->update(['quantite_en_stock' => $newQuantity]);
+
+        // Enregistrer le mouvement dans ProduitRecu pour l'historique
+        ProduitRecu::create([
+            'produit' => $produit,
+            'nom' => ProduitFixe::where('code_produit', $produit)->value('nom'),
+            'quantite' => $validated['operation'] === 'add' ? $adjustmentQuantity : -$adjustmentQuantity,
+            'date' => now(),
+            'prix' => ProduitRecu::where('produit', $produit)
+                ->orderBy('date', 'desc')
+                ->value('prix') ?? 0
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+
+    public function searchMatiere(Request $request)
+    {
+        $query = $request->get('query');
+        $matieres = Matiere::where('nom', 'LIKE', "%{$query}%")->get();
+        return response()->json($matieres);
+    }
+
+    public function searchProduit(Request $request)
+    {
+        $query = $request->get('query');
+        $produits = ProduitRecu::where('nom', 'LIKE', "%{$query}%")
+            ->select('produit', 'nom', DB::raw('SUM(quantite) as quantite_totale'), 'prix')
+            ->groupBy('produit', 'nom', 'prix')
+            ->get();
+        return response()->json($produits);
+    }
+
+    public function updateMatiere(Request $request, Matiere $matiere)
+    {
+        $validated = $request->validate([
+            'quantite' => 'required|numeric|min:0',
+            'prix_unitaire' => 'required|numeric|min:0',
+            'quantite_par_unite' => 'required|numeric|min:0'
+        ]);
+
+        $matiere->update([
+            'quantite' => $validated['quantite'],
+            'prix_unitaire' => $validated['prix_unitaire'],
+            'quantite_par_unite' => $validated['quantite_par_unite'],
+            'prix_par_unite_minimale' => $validated['prix_unitaire'] / $validated['quantite_par_unite']
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteMatiere(Matiere $matiere)
+    {
+        $matiere->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteProduit($produit)
+    {
+        ProduitRecu::where('produit', $produit)->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function adjustMatiereQuantity(Request $request, Matiere $matiere)
+    {
+        $validated = $request->validate([
+            'quantite' => 'required|numeric',
+            'operation' => 'required|in:add,subtract'
+        ]);
+
+        $newQuantity = $validated['operation'] === 'add'
+            ? $matiere->quantite + $validated['quantite']
+            : $matiere->quantite - $validated['quantite'];
+
+        if ($newQuantity < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La quantité ne peut pas être négative'
+            ], 422);
+        }
+
+        $matiere->update(['quantite' => $newQuantity]);
+        return response()->json(['success' => true]);
+    }
+
+    public function updateProduit(Request $request, $produit)
+    {
+        $validated = $request->validate([
+            'quantite' => 'required|numeric|min:0',
+            'prix' => 'required|numeric|min:0'
+        ]);
+
+        ProduitRecu::where('produit', $produit)->update([
+            'quantite' => $validated['quantite'],
+            'prix' => $validated['prix']
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+    public function getProduit($produit)
+{
+    $produit = ProduitRecu::where('produit', $produit)
+        ->select(
+            'produit',
+            'nom',
+            DB::raw('SUM(quantite) as quantite_totale'),
+            'prix'
+        )
+        ->groupBy('produit', 'nom', 'prix')
+        ->first();
+
+    if (!$produit) {
+        return response()->json(['error' => 'Produit non trouvé'], 404);
+    }
+
+    return response()->json($produit);
+}
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class VendeurController extends Controller
+{
+    public function dashboard() {
+        return view('pages/vendeur/vendeur_dashboard');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\VersementChef;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+class VersementChefController extends Controller
+{
+
+    public function index()
+    {
+        $nom = auth()->user()->name;
+        $role = auth()->user()->role;
+        $versements = VersementChef::with('chefProduction')
+            ->where('chef_production', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $total_non_valide = $versements->where('status', 0)->sum('montant');
+        $total_valide = $versements->where('status', 1)->sum('montant');
+
+        return view('versements.index', compact('versements', 'total_non_valide', 'total_valide', 'nom','role'));
+    }
+
+    public function create()
+    {
+        $role = auth()->user()->role;
+
+        $nom = auth()->user()->name;
+    // Get versements for the authenticated chef de production
+    $versements = VersementChef::with('chefProduction')
+        ->where('chef_production', Auth::id())
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    // Calculate totals
+    $total_non_valide = $versements->where('status', 0)->sum('montant');
+    $total_valide = $versements->where('status', 1)->sum('montant');
+
+    // Get today's VersementCSG records
+    $versements_csg_today = DB::table('Versement_csg')
+        ->join('users', 'Versement_csg.verseur', '=', 'users.id')
+        ->whereDate('Versement_csg.date', now()->toDateString())
+        ->select('users.name', 'users.role', 'Versement_csg.somme')
+        ->get();
+
+    // Calculate total amount received today
+    $total_today = $versements_csg_today->sum('somme');
+
+    return view('versements.create2', compact(
+        'versements',
+        'total_non_valide',
+        'total_valide',
+        'versements_csg_today',
+        'total_today',
+        'nom',
+        'role'
+    ));
+}
+
+public function sendDailyTotal()
+{
+    $today_total = DB::table('Versement_csg')
+        ->whereDate('date', now()->toDateString())
+        ->sum('somme');
+
+    // Create a new versement record
+    VersementChef::create([
+        'chef_production' => Auth::id(),
+        'montant' => $today_total,
+        'date' => now(),
+        'libelle' => 'Versement total journalier - ' . now()->format('d/m/Y'),
+        'status' => 0
+    ]);
+
+    return redirect()->route('versements.index')
+        ->with('success', 'Le montant total a été envoyé avec succès.');
+}
+
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'libelle' => 'required|string|max:255',
+            'montant' => 'required|integer|min:1',
+            'date' => 'required|date',
+        ]);
+
+        $versement = new VersementChef();
+        $versement->chef_production = Auth::id();
+        $versement->libelle = $validated['libelle'];
+        $versement->montant = $validated['montant'];
+        $versement->status = 0; // En attente par défaut
+        $versement->date = $validated['date'];
+        $versement->save();
+
+        return redirect()->route('versements.index')
+            ->with('success', 'Versement enregistré avec succès');
+    }
+
+    public function edit(VersementChef $versement)
+    {
+        if ($versement->status == 1) {
+            return redirect()->route('versements.index')
+                ->with('error', 'Impossible de modifier un versement validé');
+        }
+
+        if ($versement->chef_production !== Auth::id()) {
+            return redirect()->route('versements.index')
+                ->with('error', 'Vous n\'êtes pas autorisé à modifier ce versement');
+        }
+
+        return view('versements.edit', compact('versement'));
+    }
+
+    public function update(Request $request, VersementChef $versement)
+    {
+        if ($versement->status == 1) {
+            return redirect()->route('versements.index')
+                ->with('error', 'Impossible de modifier un versement validé');
+        }
+
+        if ($versement->chef_production !== Auth::id()) {
+            return redirect()->route('versements.index')
+                ->with('error', 'Vous n\'êtes pas autorisé à modifier ce versement');
+        }
+
+        $validated = $request->validate([
+            'libelle' => 'required|string|max:255',
+            'montant' => 'required|integer|min:1'
+        ]);
+
+        $versement->update($validated);
+
+        return redirect()->route('versements.index')
+            ->with('success', 'Versement mis à jour avec succès');
+    }
+
+    public function destroy(VersementChef $versement)
+    {
+        if ($versement->status == 1) {
+            return redirect()->route('versements.index')
+                ->with('error', 'Impossible de supprimer un versement validé');
+        }
+
+        if ($versement->chef_production !== Auth::id()) {
+            return redirect()->route('versements.index')
+                ->with('error', 'Vous n\'êtes pas autorisé à supprimer ce versement');
+        }
+
+        $versement->delete();
+
+        return redirect()->route('versements.index')
+            ->with('success', 'Versement supprimé avec succès');
+    }
+
+    // Pour le DG
+    public function validation()
+    {
+        $versements = VersementChef::with('chefProduction')
+            ->where('status', 0)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $total_en_attente = $versements->sum('montant');
+
+        return view('versements.validation', compact('versements', 'total_en_attente'));
+    }
+
+    public function valider(VersementChef $versement)
+    {
+        if ($versement->status == 1) {
+            return redirect()->route('versements.validation')
+                ->with('error', 'Ce versement a déjà été validé');
+        }
+
+        $versement->status = 1;
+        $versement->save();
+
+        return redirect()->route('versements.validation')
+            ->with('success', 'Versement validé avec succès');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\VersementCsg;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
+
+class VersementController extends Controller
+{
+    public function store_versement_cp(Request $request)
+    {
+        try {
+            // Validation
+            $validated = $request->validate([
+                'somme' => 'required|numeric|min:0',
+                'libelle' => 'required|string|max:50',
+                'date' => 'required|date',
+                'encaisseur' => 'required|exists:users,id'
+            ]);
+
+            DB::beginTransaction();
+
+            // Créer le versement
+            $versement = new VersementCsg();
+            $versement->somme = $validated['somme'];
+            $versement->libelle = $validated['libelle'];
+            $versement->date = $validated['date'];
+            $versement->verseur =  auth()->id();
+            $versement->encaisseur = $validated['encaisseur'];
+            $versement->status = 'en_attente'; // Statut par défaut
+            $versement->save();
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('success', 'Versement enregistré et en attente de validation par le chef de production');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors(['error' => 'Erreur lors de l\'enregistrement du versement: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    public function create_versement_cp()
+    {
+        // Get all users who are chefs
+        $chefs = User::where('role', 'chef_production')->get();
+        $nom = auth()->user()->name;
+
+        // Fetch recent versements ordered by date
+        $versements = VersementCsg::with(['verseur_user', 'encaisseur_user'])
+            ->orderBy('date', 'desc')
+            ->limit(10)  // Limit to last 10 payments, adjust as needed
+            ->get();
+
+        return view('versements.create', compact('chefs', 'nom', 'versements'));
+    }
+}
+#!/bin/bash
+path="./"
+
+# Parcours tous les fichiers du répertoire
+for file in "$path"/* ; do
+    # Vérifie si c'est un fichier régulier
+    if [ -f "$file" ]; then
+        cat "$file" >> requirements.txt
+    fi
+done

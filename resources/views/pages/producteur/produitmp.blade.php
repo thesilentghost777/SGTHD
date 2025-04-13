@@ -4,6 +4,12 @@
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="container mx-auto px-4">
         <div class="max-w-4xl mx-auto">
+            <button id="bouton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow mb-6">
+                <a href="{{ route('producteur.avaries.create') }}" class="flex items-center space-x-2">
+                    <i class="mdi mdi-plus-circle-outline"></i>
+                    <span>Ajouter Avarier</span>
+                </a>
+            </button>
             <!-- Header -->
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-gray-900">Enregistrer une Production</h1>

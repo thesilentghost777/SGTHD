@@ -1,6 +1,6 @@
-@extends('pages.producteur.pdefault')
+@extends('layouts.app')
 
-@section('page-content')
+@section('content')
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Roboto:wght@300;400;500&family=Inter:wght@400;500;600&display=swap');
 
@@ -13,6 +13,7 @@
         margin-bottom: 2rem;
         position: relative;
         padding-bottom: 0.5rem;
+        text-align: center;
     }
 
     .production-title::after {
@@ -30,9 +31,10 @@
         border: none;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        margin-bottom: 2rem;
+        margin: 0 auto 2rem auto; /* Centrage horizontal */
         overflow: hidden;
         transition: transform 0.3s ease;
+        max-width: 800px; /* Largeur maximale pour meilleure lisibilité */
     }
 
     .lot-card:hover {
@@ -44,6 +46,7 @@
         color: white;
         padding: 1.2rem;
         font-family: 'Inter', sans-serif;
+        text-align: center;
     }
 
     .product-section {
@@ -51,6 +54,7 @@
         padding: 1.5rem;
         border-radius: 8px;
         margin-bottom: 1.5rem;
+        text-align: center;
     }
 
     .product-name {
@@ -58,6 +62,7 @@
         color: #1a237e;
         font-weight: 500;
         margin-bottom: 1rem;
+        text-align: center;
     }
 
     .materials-list {
@@ -65,6 +70,7 @@
         padding: 1.5rem;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        margin: 0 auto; /* Centrage horizontal */
     }
 
     .material-item {
@@ -74,6 +80,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        text-align: center;
     }
 
     .material-item:last-child {
@@ -82,11 +89,11 @@
 
     .stats-table {
         width: 100%;
-        margin-top: 1.5rem;
+        margin: 1.5rem auto 0 auto; /* Centrage horizontal */
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        border-collapse: collapse; /* Ensures table cells align neatly */
+        border-collapse: collapse;
     }
 
     .stats-table th,
@@ -94,7 +101,8 @@
         padding: 1rem;
         font-family: 'Roboto', sans-serif;
         font-weight: 500;
-        text-align: center; /* Centers text horizontally */
+        text-align: center;
+        border: 1px solid #ddd;
     }
 
     .stats-table th {
@@ -105,52 +113,34 @@
 
     .value-production {
         color: #1565c0;
+        text-align: center;
     }
 
     .cost-materials {
         color: #2e7d32;
+        text-align: center;
     }
 
     .profit-positive {
         color: #2e7d32;
         font-weight: 600;
+        text-align: center;
     }
 
     .profit-negative {
         color: #c62828;
         font-weight: 600;
+        text-align: center;
     }
-    /* Applique une bordure aux cellules et aligne leur contenu */
-.stats-table {
-    width: 100%; /* Utilisation de toute la largeur disponible */
-    border-collapse: collapse; /* Fusionne les bordures des cellules */
-    text-align: left; /* Aligne le texte à gauche dans toutes les cellules */
-}
 
-.stats-table th, .stats-table td {
-    padding: 10px; /* Espacement entre le texte et la bordure de la cellule */
-    border: 1px solid #ddd; /* Bordure grise claire autour des cellules */
-    text-align: right; /* Aligne le texte à droite dans les colonnes de valeurs numériques */
-}
-
-.stats-table th {
-    background-color: #f4f4f4; /* Fond gris clair pour les en-têtes */
-    font-weight: bold; /* Texte en gras pour les en-têtes */
-}
-
-.value-production, .cost-materials, .profit-positive, .profit-negative {
-    text-align: right; /* Aligne toutes les valeurs des colonnes à droite */
-}
-
-.profit-positive {
-    color: green; /* Couleur verte pour les bénéfices positifs */
-}
-
-.profit-negative {
-    color: red; /* Couleur rouge pour les bénéfices négatifs */
-}
-
+    /* Container centré */
+    .container.py-5 {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2.5rem 15px;
+    }
 </style>
+
 <div class="container py-5">
     <h1 class="production-title text-center">Productions par Lot</h1>
 
@@ -167,7 +157,7 @@
             </div>
 
             <div class="materials-list">
-                <h4 class="h6 mb-3">Matières premières utilisées :</h4>
+                <h4 class="h6 mb-3 text-center">Matières premières utilisées :</h4>
                 @foreach($production['matieres'] as $matiere)
                     @php
                         [$convertedQuantity, $convertedUnit] = \App\Services\UnitConverter::convert($matiere['quantite'], $matiere['unite']);
@@ -184,7 +174,7 @@
                     <tr>
                         <th>Valeur de la production</th>
                         <th>Coût des matières</th>
-                        <th>Bénéfice</th>
+                        <th>Bénéfice Estimer(brut)</th>
                     </tr>
                 </thead>
                 <tbody>

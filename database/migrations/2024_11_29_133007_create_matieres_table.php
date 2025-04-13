@@ -20,6 +20,18 @@ return new class extends Migration
             $table->decimal('prix_par_unite_minimale', 10, 4);
             $table->timestamps();
         });
+    // Ajouter par défaut une matière "produit avarier"
+    DB::table('Matiere')->insert([
+        'nom' => 'produit avarier',
+        'unite_minimale' => 'unité',
+        'unite_classique' => 'unité',
+        'quantite_par_unite' => 1.000,
+        'quantite' => 0.00,
+        'prix_unitaire' => 0.00,
+        'prix_par_unite_minimale' => 0.0000,
+        'created_at' => now(),
+        'updated_at' => now()
+    ]);
     }
 
     public function down()

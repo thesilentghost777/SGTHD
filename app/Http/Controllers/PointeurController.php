@@ -1,46 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\Log;
+
 use Illuminate\Http\Request;
-use App\Models\ProduitRecu;
-use App\Models\Produit_fixes;
-use App\Models\Commande;
-use App\Models\User;
-use Carbon\Carbon;
+
 class PointeurController extends Controller
 {
     public function dashboard() {
-        $employe = auth()->user();
-
-        if (!$employe) {
-          return redirect()->route('login')->with('error', 'Veuillez vous connecter');
-        }
-        $produits = \DB::table('produit_recus')
-        ->join('produit_fixes', 'produit_recus.produit','=','produit_fixes.code_produit')
-        ->whereDate('produit_recus.created_at', Carbon::today())
-        ->select('produit_recus.produit','produit_recus.quantite', 'produit_fixes.nom')
-        ->get();
-      $commande=\DB::table('commande')
-      ->join('produit_fixes','commande.produit','=','produit_fixes.code_produit')
-      ->whereDate('commande.updated_at', Carbon::today())
-      ->select('commande.quantite','produit_fixes.nom')
-      ->where('commande.valider',true)
-      ->get();
-      $attente=\DB::table('commande')
-      ->join('produit_fixes','commande.produit','=','produit_fixes.code_produit')
-      ->select('commande.quantite','produit_fixes.nom')
-      ->where('commande.valider',false)
-      ->get();
-        $produitR=Produit_fixes::all();
-        $user = User::where('id', $employe->id)->first();
-        return view('pages/pointeur/pointeur_dashboard',[
-       'produits'=>$produits,
-       'commande'=>$commande,
-       'attente'=>$attente,
-        'produitR'=>$produitR,
-        'user'=>$user, 
-        'nom'=>$user->name,]);
+        return view('pages/pointeur/pointeur_dashboard');
     }
     
 

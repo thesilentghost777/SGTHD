@@ -1,2 +1,5 @@
-@include('pages/ddg/ddg_default')
-@vite(['resources/css/ddg/ddg_dashboard.css','resources/js/ddg/ddg_dashboard.js'])
+@extends('pages.pdg.pdg_default')
+
+@section('page-content')
+X
+@endsection

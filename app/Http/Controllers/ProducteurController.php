@@ -4,12 +4,14 @@ use App\Models\Production;
 use App\Models\Daily_assignments;
 use App\Models\Produit_fixes;
 use App\Models\User;
+use App\Models\AssignationMatiere;
 use App\Models\Commande;
 use App\Models\Production_suggerer_par_jour;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;  // Ajout de l'import
 use App\Models\Utilisation;
 use App\Models\Matiere;
+use App\Models\ProduitStock;
 use App\Services\UniteConversionService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -23,11 +25,12 @@ use App\Services\LotGeneratorService;
 use App\Services\PerformanceService;
 use Illuminate\Support\Facades\Log;
 use App\Models\ReservationMp;
-
+use App\Traits\HistorisableActions;
+use App\Http\Controllers\NotificationController;
 class ProducteurController extends Controller  // Hérite de Controller
 {
 
-
+    use HistorisableActions;
     protected $statsService;
     protected $conversionService;
     protected $productionService;
@@ -39,7 +42,8 @@ class ProducteurController extends Controller  // Hérite de Controller
         UniteConversionService $uniteConversionService,
         ProductionService $productionService,
         LotGeneratorService $lotGeneratorService,
-        ProductionStatsService $productionStatsService
+        ProductionStatsService $productionStatsService,
+        NotificationController $notificationController
     ) {
         $this->statsService = $statsService;
         $this->uniteConversionService = $uniteConversionService;
@@ -47,7 +51,7 @@ class ProducteurController extends Controller  // Hérite de Controller
         $this->productionService = $productionService;
         $this->lotGeneratorService = $lotGeneratorService;
         $this->productionStatsService = $productionStatsService;
-
+        $this->notificationController = $notificationController;
     }
 
 
@@ -146,9 +150,6 @@ private function getPeriode(): array
 }
 
 
-
-
-
     public function commande() {
     // Vérification de l'authentification
     $employe = auth()->user();
@@ -169,7 +170,7 @@ private function getPeriode(): array
     $secteur = $info->secteur;
 
     // Récupération des commandes
-    $commandes = Commande::where('categorie', $role)->get();
+    $commandes = Commande::where('categorie', $role)->where('valider',0)->get();
     return view('pages/producteur/producteur_commande', compact('nom', 'secteur', 'commandes'));
 }
 
@@ -204,52 +205,239 @@ private function getPeriode(): array
     }
 
     public function create()
-    {
-        $produits = Produit_fixes::all();
-        $matieres = Matiere::all();
-        $info = Auth::user();
-        $nom = $info->name;
-        $secteur = $info->secteur;
-        return view('pages.producteur.produitmp', compact('produits', 'matieres','nom','secteur'));
-    }
+{
+    $produits = Produit_fixes::all();
 
-    public function store2(StoreUtilisationRequest $request)
-    {
-        try {
-            DB::beginTransaction();
+    // Dates de référence
+    $today = now()->startOfDay();
+    $yesterday = now()->subDay()->startOfDay();
 
-            // Générer un ID de lot unique pour cette production
-            $lotId = $this->lotGeneratorService->generateLotId();
+    // Récupérer toutes les matières sauf celles dont le nom commence par 'Taule'
+    // et qui ont été créées avant hier
+    $matieres = Matiere::where(function($query) use ($today, $yesterday) {
+        $query->where('nom', 'not like', 'Taule%')  // Les matières qui ne commencent pas par 'Taule'
+              ->orWhere(function($q) use ($today, $yesterday) {
+                  $q->where('nom', 'like', 'Taule%')  // Les matières qui commencent par 'Taule'
+                    ->where(function($subq) use ($today, $yesterday) {
+                        $subq->where('created_at', '>=', $yesterday)  // Et créées aujourd'hui ou hier
+                             ->where('created_at', '<', $today->copy()->addDay());
+                    });
+              });
+    })->get();
 
-            foreach ($request->matieres as $matiere) {
-                $matiereModel = Matiere::findOrFail($matiere['matiere_id']);
+    $info = Auth::user();
+    $nom = $info->name;
+    $secteur = $info->secteur;
 
-                $quantiteConvertie = $this->uniteConversionService->convertir(
+    return view('pages.producteur.produitmp', compact('produits', 'matieres', 'nom', 'secteur'));
+}
+
+public function store2(StoreUtilisationRequest $request)
+{
+    try {
+        DB::beginTransaction();
+
+        // Générer un ID de lot unique pour cette production
+        $lotId = $this->lotGeneratorService->generateLotId();
+        $producteurId = Auth::id();
+        $errors = [];
+        $conversionService = $this->uniteConversionService;
+
+        // Vérifier que la quantité produite est positive
+        if ($request->quantite_produit <= 0) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'La quantité produite doit être positive')->withInput();
+        }
+
+        foreach ($request->matieres as $index => $matiere) {
+            $matiereModel = Matiere::findOrFail($matiere['matiere_id']);
+
+            // Conversion de la quantité demandée vers l'unité minimale si pas déjà en unité minimale
+            if ($matiere['unite'] !== $matiereModel->unite_minimale) {
+                $quantiteConvertie = $conversionService->convertir(
                     $matiere['quantite'],
                     $matiere['unite'],
                     $matiereModel->unite_minimale
                 );
-
-                $utilisation = new Utilisation();
-                $utilisation->id_lot = $lotId; // Assigner le même ID de lot
-                $utilisation->produit = $request->produit;
-                $utilisation->matierep = $matiere['matiere_id'];
-                $utilisation->producteur = Auth::id();
-                $utilisation->quantite_produit = $request->quantite_produit;
-                $utilisation->quantite_matiere = $quantiteConvertie;
-                $utilisation->unite_matiere = $matiereModel->unite_minimale;
-
-                $utilisation->save();
+            } else {
+                $quantiteConvertie = $matiere['quantite'];
             }
 
-            DB::commit();
-            return redirect()->back()->with('success', 'Production enregistrée avec succès');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Erreur lors de l\'enregistrement: ' . $e->getMessage())->withInput();
-        }
-    }
+            // Vérifier si la quantité de matière est positive
+            if ($quantiteConvertie <= 0) {
+                $errors[] = "La quantité de '{$matiereModel->nom}' doit être positive.";
+                continue;
+            }
 
+            // Vérifier si le producteur a cette matière assignée avec une quantité suffisante
+            $assignation = AssignationMatiere::where('producteur_id', $producteurId)
+                            ->where('matiere_id', $matiere['matiere_id'])
+                            ->where('quantite_restante', '>', 0)
+                            ->latest()
+                            ->first();
+
+            if (!$assignation) {
+                $errors[] = "La matière '{$matiereModel->nom}' n'est pas assignée à votre compte ou n'est plus disponible.";
+                continue;
+            }
+            //convertir la qte restante dans l'unité minimale
+            if ($assignation->unite_minimale !== $matiereModel->unite_minimale) {
+                $quantiteRestanteConvertie = $conversionService->convertir(
+                    $assignation->quantite_restante,
+                    $assignation->unite_assignee,
+                    $matiereModel->unite_minimale
+                );
+            } else {
+                $quantiteRestanteConvertie = $assignation->quantite_restante;
+            }
+
+            // Vérifier si la quantité est suffisante (déjà en unité minimale)
+            if ($quantiteRestanteConvertie < $quantiteConvertie) {
+                $uniteMinimaleString = is_object($matiereModel->unite_minimale) ? $matiereModel->unite_minimale->value : $matiereModel->unite_minimale;
+                $errors[] = "Quantité insuffisante pour '{$matiereModel->nom}'. " .
+                            "Disponible: {$assignation->quantite_restante} {$uniteMinimaleString}, " .
+                            "Demandé: {$quantiteConvertie} {$uniteMinimaleString}";
+                continue;
+            }
+            //retrancher la quantité de matière utiliser pour la production toujours convertie dans l'unité minimale a la quantité assigner restante en uniter minimale et enfin reconvertir la quantité restante dans l'unité assignée et savegarder
+            $quantiteRestanteConvertie -= $quantiteConvertie;
+            $matiere_cible = Matiere::findOrFail($matiere['matiere_id']);
+            $assignation->quantite_restante = $conversionService->convertir(
+                $quantiteRestanteConvertie,
+                $matiere_cible->unite_minimale,
+                $assignation->unite_assignee
+            );
+            Log::info('Conversion des unités pour assignation', [
+                'quantiteRestanteConvertie' => $quantiteRestanteConvertie,
+                'unite_minimale' => $matiereModel->unite_minimale,
+                'unite_assignee' => $assignation->unite_assignee,
+            ]);
+            $assignation->save();
+        }
+
+        // S'il y a des erreurs, annuler la transaction
+        if (!empty($errors)) {
+            DB::rollBack();
+            return redirect()->back()->with('error', implode('<br>', $errors))->withInput();
+        }
+
+        // Récupérer le produit pour calculer la valeur de la production
+        $produit = DB::table('Produit_fixes')->where('code_produit', $request->produit)->first();
+        if (!$produit) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Produit non trouvé')->withInput();
+        }
+
+        // Calculer la valeur totale de la production
+        $valeurTotale = $request->quantite_produit * $produit->prix;
+        $coutTotal = 0;
+
+        // Procéder à l'enregistrement et mise à jour des quantités
+        foreach ($request->matieres as $matiere) {
+            $matiereModel = Matiere::findOrFail($matiere['matiere_id']);
+
+            // Conversion de la quantité en unité minimale
+            if ($matiere['unite'] !== $matiereModel->unite_minimale) {
+                $quantiteConvertie = $conversionService->convertir(
+                    $matiere['quantite'],
+                    $matiere['unite'],
+                    $matiereModel->unite_minimale
+                );
+            } else {
+                $quantiteConvertie = $matiere['quantite'];
+            }
+
+            // Récupérer à nouveau l'assignation pour mise à jour
+            $assignation = AssignationMatiere::where('producteur_id', $producteurId)
+                            ->where('matiere_id', $matiere['matiere_id'])
+                            ->where('quantite_restante', '>', 0)
+                            ->latest()
+                            ->first();
+
+            // Déduire la quantité utilisée (en unité minimale)
+            $assignation->quantite_restante -= $quantiteConvertie;
+            $assignation->save();
+
+            // Créer l'enregistrement d'utilisation
+            $utilisation = new Utilisation();
+            $utilisation->id_lot = $lotId;
+            $utilisation->produit = $request->produit;
+            $utilisation->matierep = $matiere['matiere_id'];
+            $utilisation->producteur = $producteurId;
+            $utilisation->quantite_produit = $request->quantite_produit;
+            $utilisation->quantite_matiere = $quantiteConvertie;
+            $utilisation->unite_matiere = is_object($matiereModel->unite_minimale) ? $matiereModel->unite_minimale->value : $matiereModel->unite_minimale;
+            $utilisation->save();
+
+            // Ajouter au coût total des matières
+            $coutMatiere = $quantiteConvertie * $matiereModel->prix_par_unite_minimale;
+            $coutTotal += $coutMatiere;
+        }
+
+        // Calculer le bénéfice
+        $benefice = $valeurTotale - $coutTotal;
+
+        // Mettre à jour le stock de produits
+        $produitStock = ProduitStock::firstOrNew(['id_produit' => $request->produit]);
+        $produitStock->quantite_en_stock += $request->quantite_produit;
+        $produitStock->save();
+
+        // Historiser l'opération
+        $infoProducteur = User::findOrFail($producteurId);
+        $this->historiser("Production du lot {$lotId} par {$infoProducteur->name}: {$request->quantite_produit} unités de {$produit->nom}. Bénéfice: {$benefice} FCFA", 'create_production');
+
+        // Envoyer des notifications en fonction du bénéfice
+        $producteur = User::findOrFail($producteurId);
+        $chefProduction = User::where('role', 'chef_production')->first();
+
+        // Notification pour bénéfice négatif ou inférieur à 5000
+        if ($benefice < 5000) {
+            // Notification au producteur
+            $request->merge([
+                'recipient_id' => $producteurId,
+                'subject' => 'Alerte - Bénéfice faible sur production',
+                'message' => "Votre production du lot {$lotId} a généré un bénéfice de {$benefice} FCFA, ce qui est inférieur au seuil de rentabilité recommandé de 5000 FCFA. Nous vous invitons à revoir votre processus de production pour optimiser les coûts."
+            ]);
+            $this->notificationController->send($request);
+
+            // Notification au chef de production si disponible
+            if ($chefProduction) {
+                $request->merge([
+                    'recipient_id' => $chefProduction->id,
+                    'subject' => 'Alerte - Production à faible rentabilité',
+                    'message' => "La production du lot {$lotId} par {$producteur->name} a généré un bénéfice de seulement {$benefice} FCFA, ce qui est inférieur au seuil de rentabilité recommandé de 5000 FCFA."
+                ]);
+                $this->notificationController->send($request);
+            }
+        }
+        // Notification pour bénéfice supérieur à 25000
+        elseif ($benefice > 25000) {
+            // Notification au producteur
+            $request->merge([
+                'recipient_id' => $producteurId,
+                'subject' => 'Félicitations - Production très rentable',
+                'message' => "Votre production du lot {$lotId} a généré un excellent bénéfice de {$benefice} FCFA, dépassant le seuil de haute rentabilité de 25000 FCFA. Félicitations pour cette performance remarquable!"
+            ]);
+            $this->notificationController->send($request);
+
+            // Notification au chef de production si disponible
+            if ($chefProduction) {
+                $request->merge([
+                    'recipient_id' => $chefProduction->id,
+                    'subject' => 'Performance exceptionnelle - Production très rentable',
+                    'message' => "La production du lot {$lotId} par {$producteur->name} a généré un excellent bénéfice de {$benefice} FCFA, dépassant le seuil de haute rentabilité de 25000 FCFA."
+                ]);
+                $this->notificationController->send($request);
+            }
+        }
+
+        DB::commit();
+        return redirect()->back()->with('success', 'Production enregistrée avec succès. Bénéfice réalisé: ' . $benefice . ' FCFA');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()->back()->with('error', 'Erreur lors de l\'enregistrement: ' . $e->getMessage())->withInput();
+    }
+}
 public function comparaison(Request $request)
 {
     $employe = auth()->user();

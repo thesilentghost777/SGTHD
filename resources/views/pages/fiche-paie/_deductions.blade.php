@@ -26,4 +26,5 @@
         <span>{{ number_format($fichePaie['pret'], 2) }} FCFA</span>
     </div>
     @endif
+
 </div>

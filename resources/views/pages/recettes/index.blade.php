@@ -25,10 +25,22 @@
                 <h1 class="text-3xl font-bold text-gray-900">Livre de Recettes</h1>
                 <p class="mt-2 text-gray-600">{{ $secteur }} - {{ $nom }}</p>
             </div>
-            <a href="{{ route('recettes.create') }}"
-               class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+            @if(auth()->user()->secteur != 'administration')
+            <a href="{{ route('recipes.instructions') }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                Recettes Detaillees
+            </a>
+            @endif
+
+            @if(auth()->user()->secteur == 'administration')
+            <a href="{{ route('recipes.admin') }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                Recettes Avancées
+            </a>
+            <a href="{{ route('recettes.create') }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
                 Ajouter une recette
             </a>
+
+
+        @endif
         </div>
 
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">

@@ -13,6 +13,11 @@
         </style>
     </head>
     <div id="form">
+         <!-- Message d'avertissement pour le code secret -->
+         <div class="secret-code-warning">
+            ⚠️ IMPORTANT : Pour obtenir le code secret de votre poste, veuillez contacter directement le Directeur Général (DG).
+            Ce code est strictement confidentiel et personnel.
+        </div>
     <form method="POST" action="{{ route('sign_up') }}">
         @csrf
 
@@ -56,6 +61,7 @@
         <select id="secteur" name="secteur">
             <option value="">Sélectionnez un département</option>
             <option value="alimentation">Alimentation</option>
+            <option value="vente">Vente</option>
             <option value="production">Production</option>
             <option value="glace">Glace</option>
             <option value="administration">Administration</option>
@@ -68,10 +74,14 @@
             <option value="">Sélectionnez un rôle</option>
             <optgroup label="Alimentation">
                 <option value="caissiere" data-department="alimentation">Caissier(e)</option>
-                <option value="cave" data-department="alimentation">Calviste</option>
-                <option value="rayon" data-department="alimentation">Rayoniste</option>
-                <option value="controlleur" data-department="alimentation">Contrôleur</option>
+                <option value="calviste" data-department="alimentation">Calviste</option>
+                <option value="magasinier" data-department="alimentation">Magasinier</option>
+                <option value="rayoniste" data-department="alimentation">Rayoniste</option>
+                <option value="controleur" data-department="alimentation">Contrôleur</option>
                 <option value="tech_surf" data-department="alimentation">Technicien de Surface</option>
+                <option value="virgile" data-department="alimentation">Virgil</option>
+                <option value="chef_rayoniste" data-department="alimentation">Chef rayonniste</option>
+
             </optgroup>
             <optgroup label="Production">
                 <option value="patissier" data-department="production">Patissier(e)</option>
@@ -81,13 +91,18 @@
                 <option value="tech_surf" data-department="production">Technicien de Surface</option>
             </optgroup>
             <optgroup label="Glace">
-                <option value="glaciere" data-department="glace">Glacière</option>
+                <option value="glace" data-department="glace">Glace</option>
             </optgroup>
             <optgroup label="Administration">
                 <option value="chef_production" data-department="administration">Chef Production</option>
+                <option value="gestionnaire_alimentaion" data-department="administration">Gestionnaire alimentation</option>
                 <option value="dg" data-department="administration">DG</option>
                 <option value="ddg" data-department="administration">DDG</option>
                 <option value="pdg" data-department="administration">PDG</option>
+            </optgroup>
+            <optgroup label="Vente">
+                <option value="vendeur_boulangerie" data-department="vente">Vendeur(se) boulangerie</option>
+                <option value="vendeur_patisserie" data-department="vente">Vendeur(se) patisserie</option>
             </optgroup>
         </select>
         <div class="error-message" id="roleError"></div>
@@ -142,12 +157,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             const secteurSelect = document.getElementById('secteur');
             const roleSelect = document.getElementById('role');
-            
+
             // Fonction pour filtrer les rôles en fonction du département
             function filterRoles() {
                 const selectedDepartment = secteurSelect.value;
                 const options = roleSelect.querySelectorAll('option');
-                
+
                 options.forEach(option => {
                     const department = option.getAttribute('data-department');
                     if (!department || department === selectedDepartment) {
@@ -156,7 +171,7 @@
                         option.style.display = 'none';
                     }
                 });
-                
+
                 // Réinitialiser la sélection si le rôle actuel n'appartient pas au département
                 const currentRole = roleSelect.value;
                 const currentOption = roleSelect.querySelector(`option[value="${currentRole}"]`);
@@ -164,11 +179,11 @@
                     roleSelect.value = '';
                 }
             }
-            
+
             secteurSelect.addEventListener('change', filterRoles);
             filterRoles(); // Appliquer le filtre au chargement
         });
-        
+
 
         </script>
 </x-guest-layout>

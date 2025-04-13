@@ -1,28 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sac de Vente</title>
-    <link rel="stylesheet" href="{{asset('css/serveur/serveur-vendu.css')}}">
-</head>
-<body>
-<h1>Sac de  Vente</h1>
-<div id="form-container">
- <form action="{{ route('serveur-nbre_sacs') }}" method="POST">
-            @csrf
-            @method('POST')
-            <div class="form-group">
-            <label for="quantite">Quantité :</label>
-                <input type="number" name="quantite" id="quantite" required>
-            Choix du sac :
-            <select name="sac">
-                <option value="">Selectionner un sac</option>
-                <option value="sac">Sac de 100 XAF</option>
-                <option value="plastique">Plastique de 50 XAF</option>
+@extends('pages/serveur/serveur_default')
+
+@section('page-content')
+<div class="container mx-auto px-4 py-12">
+    <div class="max-w-xl mx-auto">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-8">Quelle opération voulez-vous effectuer ?</h1>
+
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="space-y-4">
+                <a href="{{ route('bag.receptions.create') }}" class="block bg-green-500 hover:bg-green-700 text-white text-center font-bold py-4 px-6 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out">
+                    📦 Sacs/Contenants reçus
+                </a>
+
+                <a href="{{ route('bag.sales.create') }}" class="block bg-blue-500 hover:bg-blue-700 text-white text-center font-bold py-4 px-6 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out">
+                    💰 Sacs/Contenants vendus
+                </a>
             </div>
-            <input type="submit" value="Enregistrer">
-        </form>
+        </div>
+    </div>
 </div>
-</body>
-</html>
+@endsection

@@ -1,0 +1,1072 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+
+class ACouper extends Model
+{
+    use HasFactory;
+
+    protected $table = 'Acouper';
+
+    protected $fillable = [
+        'id_employe',
+        'manquants',
+        'remboursement',
+        'pret',
+        'caisse_sociale',
+        'date'
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'manquants' => 'integer',
+        'remboursement' => 'integer',
+        'pret' => 'integer',
+        'caisse_sociale' => 'integer'
+    ];
+
+    public function employe(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_employe');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class AssignationMatiere extends Model
+{
+    protected $table = 'assignations_matiere';
+
+    protected $fillable = [
+        'producteur_id',
+        'matiere_id',
+        'quantite_assignee',
+        'unite_assignee',
+        'utilisee',
+        'date_limite_utilisation'
+    ];
+
+    protected $casts = [
+        'utilisee' => 'boolean',
+        'date_limite_utilisation' => 'datetime'
+    ];
+
+    public function producteur(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'producteur_id');
+    }
+
+    public function matiere(): BelongsTo
+    {
+        return $this->belongsTo(Matiere::class, 'matiere_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class AvanceSalaire extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'id_employe',
+        'sommeAs',
+        'flag',
+        'retrait_demande',
+        'retrait_valide',
+        'mois_as'
+    ];
+
+    public function employe()
+    {
+        return $this->belongsTo(User::class, 'id_employe');
+    }
+
+    public function peutDemanderAS()
+    {
+        return !$this->where('id_employe', auth()->id())
+            ->whereMonth('mois_as', now()->month)
+            ->whereYear('mois_as', now()->year)
+            ->exists();
+    }
+}<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Bag extends Model
+{
+    protected $fillable = [
+        'name',
+        'price',
+        'stock_quantity',
+        'alert_threshold'
+    ];
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(BagTransaction::class);
+    }
+
+    public function isLowStock(): bool
+    {
+        return $this->stock_quantity <= $this->alert_threshold;
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class BagTransaction extends Model
+{
+    protected $fillable = [
+        'bag_id',
+        'type',
+        'quantity',
+        'transaction_date'
+    ];
+
+    protected $casts = [
+        'transaction_date' => 'date'
+    ];
+
+    public function bag(): BelongsTo
+    {
+        return $this->belongsTo(Bag::class);
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Commande extends Model {
+    protected $table = 'Commande';  // Spécifiez le nom de la table en minuscules
+
+    protected $fillable = [
+        'libelle',
+        'produit',
+        'quantite',
+        'date_commande',
+        'categorie',
+        'valider'
+    ];
+
+    protected $casts = [
+        'date_commande' => 'datetime',
+        'valider' => 'boolean'
+    ];
+
+    public function produitFixe()
+    {
+        return $this->belongsTo(Produit_fixes::class, 'produit', 'code_produit');
+    }
+
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Complexe extends Model
+{
+    protected $table = 'Complexe';
+}
+<?php
+
+namespace App\Models;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Daily_assignments extends Model
+{
+    protected $table = 'Daily_assignments';
+    use HasFactory;
+
+    protected $fillable = [
+        'chef_production',
+        'producteur',
+        'produit',
+        'expected_quantity',
+        'assignment_date',
+        'status'
+    ];
+
+    protected $casts = [
+        'assignment_date' => 'date'
+    ];
+
+    public function produitFixe()
+    {
+        return $this->belongsTo(Produit_fixes::class, 'produit', 'code_produit');
+    }
+
+    public function producteur()
+    {
+        return $this->belongsTo(User::class, 'producteur', 'id');
+    }
+
+    public function chefProduction()
+    {
+        return $this->belongsTo(User::class, 'chef_production', 'id');
+    }
+}
+<?php
+// app/Models/Deli.php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+class Deli extends Model
+{
+    protected $fillable = [
+        'nom',
+        'description',
+        'montant',
+    ];
+
+    public function employes(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'deli_user')
+            ->withPivot('date_incident')
+            ->withTimestamps();
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Depense extends Model
+{
+    protected $fillable = [
+        'auteur',
+        'nom',
+        'prix',
+        'type',
+        'idm',
+        'date',
+        'valider'
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'valider' => 'boolean',
+        'prix' => 'decimal:2'
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'auteur');
+    }
+
+    public function matiere(): BelongsTo
+    {
+        return $this->belongsTo(Matiere::class, 'idm');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Evaluation extends Model
+{
+    use HasFactory;
+
+    /**
+     * The table associated with the model.
+     * Laravel assumes the table name is the pluralized form of the model name (evaluations).
+     * If the table name differs, define it explicitly:
+     * protected $table = 'evaluations';
+     */
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'user_id',
+        'note',
+        'appreciation',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'note' => 'decimal:2',
+    ];
+
+    /**
+     * Get the user that owns the evaluation.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Evenement extends Model
+{
+    protected $table = 'Evenement';
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Extra extends Model
+{
+    use HasFactory;
+
+    /**
+     * Le nom de la table associée au modèle.
+     *
+     * @var string
+     */
+    protected $table = 'Extra';
+
+    /**
+     * Les attributs qui sont assignables en masse.
+     *
+     * @var array<string>
+     */
+    protected $fillable = [
+        'secteur',
+        'heure_arriver_adequat',
+        'heure_depart_adequat',
+        'salaire_adequat',
+        'interdit',
+        'regles',
+        'age_adequat'
+    ];
+
+    /**
+     * Les attributs qui doivent être convertis en types natifs.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'heure_arriver_adequat' => 'datetime',
+        'heure_depart_adequat' => 'datetime',
+        'salaire_adequat' => 'decimal:2',
+        'age_adequat' => 'integer',
+    ];
+
+    /**
+     * Règles de validation pour les attributs du modèle.
+     *
+     * @return array
+     */
+    public static function rules()
+    {
+        return [
+            'secteur' => 'required|string|max:50',
+            'heure_arriver_adequat' => 'required|date_format:H:i',
+            'heure_depart_adequat' => 'required|date_format:H:i|after:heure_arriver_adequat',
+            'salaire_adequat' => 'required|numeric|min:0',
+            'interdit' => 'nullable|string',
+            'regles' => 'nullable|string',
+            'age_adequat' => 'required|integer|min:16|max:70'
+        ];
+    }
+
+    /**
+     * Messages d'erreur personnalisés pour la validation.
+     *
+     * @return array
+     */
+    public static function messages()
+    {
+        return [
+            'secteur.required' => 'Le secteur est obligatoire',
+            'secteur.max' => 'Le secteur ne peut pas dépasser 50 caractères',
+            'heure_arriver_adequat.required' => 'L\'heure d\'arrivée est obligatoire',
+            'heure_arriver_adequat.date_format' => 'Le format de l\'heure d\'arrivée est invalide',
+            'heure_depart_adequat.required' => 'L\'heure de départ est obligatoire',
+            'heure_depart_adequat.date_format' => 'Le format de l\'heure de départ est invalide',
+            'heure_depart_adequat.after' => 'L\'heure de départ doit être après l\'heure d\'arrivée',
+            'salaire_adequat.required' => 'Le salaire est obligatoire',
+            'salaire_adequat.numeric' => 'Le salaire doit être un nombre',
+            'salaire_adequat.min' => 'Le salaire ne peut pas être négatif',
+            'age_adequat.required' => 'L\'âge est obligatoire',
+            'age_adequat.integer' => 'L\'âge doit être un nombre entier',
+            'age_adequat.min' => 'L\'âge minimum est de 16 ans',
+            'age_adequat.max' => 'L\'âge maximum est de 70 ans'
+        ];
+    }
+
+    /**
+     * Obtenir la durée de travail en heures
+     *
+     * @return float
+     */
+    public function getDureeTravailAttribute()
+    {
+        $debut = new \DateTime($this->heure_arriver_adequat);
+        $fin = new \DateTime($this->heure_depart_adequat);
+        $interval = $debut->diff($fin);
+        return $interval->h + ($interval->i / 60);
+    }
+
+    /**
+     * Obtenir le salaire horaire
+     *
+     * @return float
+     */
+    public function getSalaireHoraireAttribute()
+    {
+        return $this->salaire_adequat / $this->duree_travail;
+    }
+
+    /**
+     * Vérifier si un âge est adéquat pour ce secteur
+     *
+     * @param int $age
+     * @return bool
+     */
+    public function isAgeAdequat($age)
+    {
+        return $age >= $this->age_adequat;
+    }
+
+    /**
+     * Convertir les interdits en tableau
+     *
+     * @return array
+     */
+    public function getInterditsArrayAttribute()
+    {
+        return $this->interdit ? array_map('trim', explode(',', $this->interdit)) : [];
+    }
+
+    /**
+     * Convertir les règles en tableau
+     *
+     * @return array
+     */
+    public function getReglesArrayAttribute()
+    {
+        return $this->regles ? array_map('trim', explode(',', $this->regles)) : [];
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Facture extends Model
+{
+    protected $table = 'Facture';
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Horaire extends Model
+{
+    protected $table = 'Horaire';
+
+    protected $fillable = [
+        'employe',
+        'arrive',
+        'depart'
+    ];
+
+    protected $casts = [
+        'arrive' => 'datetime',
+        'depart' => 'datetime'
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'employe');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use App\Enums\UniteMinimale;
+use App\Services\MatiereService;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Matiere extends Model
+{
+    use HasFactory;
+    protected $table = 'Matiere';
+    protected $fillable = [
+        'nom',
+        'unite_minimale',
+        'unite_classique',
+        'quantite_par_unite',
+        'quantite',
+        'prix_unitaire',
+        'prix_par_unite_minimale'
+    ];
+
+    protected $casts = [
+        'unite_minimale' => UniteMinimale::class
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($matiere) {
+            $service = new MatiereService();
+            $matiere->prix_par_unite_minimale = $service->calculerPrixParUniteMinimale(
+                $matiere->prix_unitaire,
+                $matiere->quantite_par_unite,
+                $matiere->unite_classique,
+                $matiere->unite_minimale->value
+            );
+        });
+
+        static::updating(function ($matiere) {
+            $service = new MatiereService();
+            $matiere->prix_par_unite_minimale = $service->calculerPrixParUniteMinimale(
+                $matiere->prix_unitaire,
+                $matiere->quantite_par_unite,
+                $matiere->unite_classique,
+                $matiere->unite_minimale->value
+            );
+        });
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class MatiereRecommander extends Model
+{
+    protected $table = 'Matiere_recommander';
+
+    protected $fillable = [
+        'produit',
+        'matierep',
+        'quantitep',
+        'quantite',
+        'unite'
+    ];
+
+    public function produit(): BelongsTo
+    {
+        return $this->belongsTo(Produit_fixes::class, 'produit', 'code_produit');
+    }
+
+    public function matiere(): BelongsTo
+    {
+        return $this->belongsTo(Matiere::class, 'matierep');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Message extends Model
+{
+    use HasFactory;
+    protected $table='Message';
+    protected $fillable = ['message', 'type', 'date_message', 'name', 'read'];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Planning extends Model
+{
+    protected $fillable = [
+        'libelle',
+        'employe',
+        'type',
+        'date',
+        'heure_debut',
+        'heure_fin'
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'heure_debut' => 'datetime',
+        'heure_fin' => 'datetime'
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'employe');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Porter extends Model
+{
+    protected $table = 'Porter';
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Prime extends Model
+{
+    use HasFactory;
+    protected $table = 'Prime';
+    protected $fillable = [
+        'id_employe',
+        'libelle',
+        'montant'
+    ];
+
+    public function employe()
+    {
+        return $this->belongsTo(Employe::class, 'id_employe');
+    }
+}
+<?php
+
+namespace App\Models;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Production_suggerer_par_jour extends Model
+{
+    protected $table = 'Production_suggerer_par_jour';
+    use HasFactory;
+}
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use App\Models\ProduitRecu;
+use App\Models\Produit_fixes;
+class ProduitRecu extends Model
+{
+    use HasFactory;
+    protected $table='Produit_recu';
+    protected $primaryKey='code_produit';
+    protected $fillable=[
+        'pointeur','produit','prix','quantite'
+    ];
+    public function produit(){
+        return $this->belongsTo(Produit_fixes::class,'code_produit','code_produit');
+    }
+}
+?>
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ProduitStock extends Model
+{
+    protected $fillable = [
+        'id_produit',
+        'quantite_en_stock',
+        'quantite_invendu',
+        'quantite_avarie'
+    ];
+
+    public function produitFixe(): BelongsTo
+    {
+        return $this->belongsTo(ProduitFixe::class, 'id_produit', 'code_produit');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+
+class Produit_fixes extends Model
+{
+    use HasFactory;
+    protected $table = 'Produit_fixes';
+    protected $primaryKey = 'code_produit';
+
+    protected $fillable = [
+        'nom',
+        'prix',
+        'categorie',
+    ];
+
+    public function utilisations(): HasMany
+    {
+        return $this->hasMany(Utilisation::class, 'produit', 'code_produit');
+    }
+    public function matiereRecommandee()
+{
+    return $this->hasMany(MatiereRecommander::class, 'produit', 'code_produit');
+}
+public function productions(){
+    return $this->hasMany(Production::class,'produit','code_produit');
+}
+public function receptions(){
+return $this->hasMany(ProduitRecu::class,'produit','code_produit');
+}
+public function ventes(){
+return $this->hasMany(TransactionVente::class,'produit','code_produit');
+ }
+
+
+}
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ReposConge extends Model
+{
+    protected $fillable = [
+        'employe_id',
+        'jour',
+        'conges',
+        'debut_c',
+        'raison_c',
+        'autre_raison'
+    ];
+
+    protected $casts = [
+        'debut_c' => 'date',
+    ];
+
+    public function employe(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'employe_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ReservationMp extends Model
+{
+    protected $table = 'Reservations_mp';
+
+    protected $fillable = [
+        'producteur_id',
+        'matiere_id',
+        'quantite_demandee',
+        'unite_demandee',
+        'statut',
+        'commentaire'
+    ];
+
+    public function producteur(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'producteur_id');
+    }
+
+    public function matiere(): BelongsTo
+    {
+        return $this->belongsTo(Matiere::class, 'matiere_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Salaire extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'id_employe',
+        'somme',
+        'somme_effective_mois'
+    ];
+
+    public function employe()
+    {
+        return $this->belongsTo(User::class, 'id_employe');
+    }
+}<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class TransactionVente extends Model
+{
+    use HasFactory;
+    protected $fillable = [
+        'produit',
+        'serveur',
+        'quantite',
+        'prix',
+        'total_ventes',
+        'date_vente',
+        'created_at',
+        'updated_at'
+    ];
+    public function produit(){
+        return $this->belongsTo(Produit_fixes::class,'code_produit','code_produit');
+         }
+         public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+class User extends Authenticatable implements MustVerifyEmail
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'date_naissance',
+        'code_secret',
+        'secteur',
+        'role',
+        'num_tel',
+        'avance_salaire',
+        'annee_debut_service'
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+    public function utilisations(): HasMany
+    {
+        return $this->hasMany(Utilisation::class, 'producteur', 'id');
+    }
+    public function salaires()
+    {
+        return $this->hasMany(Salaire::class, 'id_employe', 'id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction_vente::class);
+    }
+
+    public function evaluation()
+    {
+        // Assuming evaluations table has a foreign key `user_id`
+        return $this->hasMany(Evaluation::class);
+    }
+    public function delis()
+{
+    return $this->belongsToMany(Deli::class, 'deli_user')
+        ->withPivot('date_incident')
+        ->withTimestamps();
+}
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Utilisation extends Model
+{
+    protected $table = 'Utilisation';
+
+    protected $fillable = [
+        'produit',
+        'matierep',
+        'producteur',
+        'quantite_produit',
+        'quantite_matiere'
+    ];
+
+    public function matiere(): BelongsTo
+    {
+        return $this->belongsTo(Matiere::class, 'matierep', 'id');
+    }
+
+    public function produitFixe(): BelongsTo
+    {
+        return $this->belongsTo(Produit_fixes::class, 'produit', 'code_produit');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'producteur', 'id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class VersementChef extends Model
+{
+    protected $table = 'Versement_chef';
+    protected $primaryKey = 'code_vc';
+
+    protected $fillable = [
+        'chef_production',
+        'libelle',
+        'montant',
+        'date',
+        'status' // 0: En attente, 1: Validé
+    ];
+
+    public function chefProduction()
+    {
+        return $this->belongsTo(User::class, 'chef_production');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+class VersementCsg extends Model
+{
+    use HasFactory;
+    protected $table = 'Versement_csg';
+    protected $primaryKey='code_vcsg';
+    protected $fillable = [
+        'libelle',
+        'date',
+        'somme',
+        'verseur',
+        'encaisseur',
+        'created_at',
+        'updated_at'
+    ];
+
+    // In App\Models\VersementCsg.php
+public function verseur_user()
+{
+    return $this->belongsTo(User::class, 'verseur');
+}
+
+public function encaisseur_user()
+{
+    return $this->belongsTo(User::class, 'encaisseur');
+}
+}
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class loginmodels extends Model
+{
+    //
+}
+#!/bin/bash
+path="./"
+
+# Parcours tous les fichiers du répertoire
+for file in "$path"/* ; do
+    # Vérifie si c'est un fichier régulier
+    if [ -f "$file" ]; then
+        cat "$file" >> requirements.txt
+    fi
+done

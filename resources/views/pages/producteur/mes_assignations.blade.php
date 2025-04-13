@@ -31,6 +31,9 @@
                             Quantité Assignée
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Quantité Restante
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Date Limite
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -45,7 +48,10 @@
                                 {{ $assignation->matiere->nom }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                {{ $assignation->quantite_assignee }} {{ $assignation->unite_assignee }}
+                                {{ round($assignation->quantite_assignee,1) }} {{ $assignation->unite_assignee }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {{ round($assignation->quantite_restante,1) }} {{ $assignation->unite_assignee }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {{ $assignation->date_limite_utilisation->format('d/m/Y H:i') }}

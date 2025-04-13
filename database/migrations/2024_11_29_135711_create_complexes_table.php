@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('Complexe', function (Blueprint $table) {
             $table->unsignedBigInteger('id_comp');
+            $table->string('nom', 50);
             $table->string('localisation', 50);
-            $table->unsignedBigInteger('revenu_journalier')->default(0);
             $table->bigInteger('revenu_mensuel')->default(0);
             $table->bigInteger('revenu_annuel')->default(0);
             $table->bigInteger('solde')->default(0);
+            $table->$table->bigInteger('caisse_sociale')->nullable()->default(0);
+            $table->$table->bigInteger('valeur_caisse_sociale')->default(0);
             $table->timestamps();
         });
     }

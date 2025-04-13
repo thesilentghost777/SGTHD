@@ -24,7 +24,9 @@ class ProductionService
 
     public function getExpectedProductions(int $employeId): Collection
     {
-        $assignments = Daily_assignments::where('producteur', $employeId)->get();
+        $assignments = Daily_assignments::where('producteur', $employeId)
+        ->whereDate('assignment_date', now())
+        ->get();
         return $this->buildExpectedProductionsCollection($assignments, $employeId);
     }
 

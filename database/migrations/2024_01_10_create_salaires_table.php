@@ -12,9 +12,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('id_employe')->constrained('users')->onDelete('cascade');
             $table->decimal('somme', 10, 2);
-            $table->decimal('somme_effective_mois', 10, 2);
+            $table->boolean('flag')->default(false);
+            $table->boolean('retrait_demande')->default(false);
+            $table->boolean('retrait_valide')->default(false);
+            $table->date('mois_salaire')->default(now());
             $table->timestamps();
-            
+
             // Un employé ne peut avoir qu'un seul salaire
             $table->unique('id_employe');
         });

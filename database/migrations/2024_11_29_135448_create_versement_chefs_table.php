@@ -6,25 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::create('Versement_chef', function (Blueprint $table) {
             $table->unsignedBigInteger('code_vc')->autoIncrement();
             $table->unsignedBigInteger('chef_production');
             $table->string('libelle', 255);
-            $table->Integer('montant');
+            $table->integer('montant');
+            $table->boolean('status')->default(0); // 0: En attente, 1: Validé
+            $table->date('date');
             $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('Versement_chef');
     }

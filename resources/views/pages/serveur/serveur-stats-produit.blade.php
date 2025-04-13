@@ -1,254 +1,174 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('pages/serveur/serveur_default')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Statistiques des Produits</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f9;
-            margin: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        #chart-container, #line-chart-container,#salesChart-container {
-            width: 80%;
-            margin: 20px auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        canvas {
-            margin-top: 20px;
-        }
-        #salesChart {
-            max-width: 500px;
-            margin: 20px auto;
-            display: block;
-        }
-        @media screen and (max-width: 1024px) {
-    #chart-container,
-    #line-chart-container,
-    #salesChart-container {
-        width: 90%;
-        padding: 15px;
-    }
-
-    #salesChart {
-        max-width: 400px;
-    }
-
-    h1 {
-        font-size: 2rem;
-    }
-}
-
-/* Écrans petits (mobiles entre 480px et 768px) */
-@media screen and (max-width: 768px) {
-    #chart-container,
-    #line-chart-container,
-    #salesChart-container {
-        width: 95%;
-        padding: 10px;
-    }
-
-    #salesChart {
-        max-width: 100%;
-        margin: 10px auto;
-    }
-
-    h1 {
-        font-size: 1.8rem;
-    }
-
-    canvas {
-        margin-top: 10px;
-    }
-}
-
-/* Écrans très petits (mobiles < 480px) */
-@media screen and (max-width: 480px) {
-    #chart-container,
-    #line-chart-container,
-    #salesChart-container {
-        width: 100%;
-        padding: 8px;
-    }
-
-    h1 {
-        font-size: 1.6rem;
-    }
-
-    #salesChart {
-        max-width: 100%;
-    }
-
-    canvas {
-        margin-top: 8px;
-    }
-}
-    </style>
-</head>
-
-<body>
-    <h1>Statistiques des Produits Vendus et Invendus</h1>
-
-    <!-- Graphique en courbe -->
-    <div id="line-chart-container">
-        <h2>Évolution des Ventes par Jour</h2>
-        <canvas id="lineChart" width="400" height="200"></canvas>
+@section('page-content')
+<div class="py-8 bg-white">
+    <!-- En-tête avec boutons -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+            <h1 class="text-2xl font-bold text-gray-900">
+                Tableau de bord
+            </h1>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="{{route('serveur-produit_invendu')}}"
+                   class="inline-flex items-center justify-center px-5 py-3 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <span class="mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 00-1 1v5H4a1 1 0 100 2h5v5a1 1 0 102 0v-5h5a1 1 0 100-2h-5V4a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    Enregistrer produits
+                </a>
+                <a href="{{route('versements.index')}}"
+                   class="inline-flex items-center justify-center px-5 py-3 bg-white text-blue-600 text-sm font-medium rounded-md shadow-sm border border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <span class="mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    Effectuer un versement
+                </a>
+            </div>
+        </div>
     </div>
 
-    <!-- Graphique circulaire -->
-     <div id="salesChart-container">
-    <h2>Diagramme Circulaire des Ventes Mensuelles</h2>
-    <canvas id="salesChart" width="400" height="400"></canvas>
+    <!-- Conteneur principal -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Graphique principal (occupe 2 colonnes) -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                <div class="p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6">Évolution des Ventes</h2>
+                    <div class="h-[400px]">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphique circulaire -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                <div class="p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6">Distribution des Ventes</h2>
+                    <div class="h-[400px] flex items-center justify-center">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique en barres (pleine largeur) -->
+        <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden mb-8">
+            <div class="p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">Comparaison Ventes/Invendus</h2>
+                <div class="h-[400px]">
+                    <canvas id="myChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-    <!-- Graphique en barres -->
-    <div id="chart-container">
-        <h2>Produits Vendus et Invendus</h2>
-        <canvas id="myChart" width="400" height="200"></canvas>
-    </div>
+</div>
 
-    <script>
-        // Graphique en barres
-        function createBarChart() {
-            const produits = @json($produits);
-            const labels = produits.map(produit => produit.produit_nom);
-            const produitsVendus = produits.map(produit => produit.total_quantite_vendu);
-            const produitsInvendus = produits.map(produit => produit.total_quantite_invendu);
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
-            const barCtx = document.getElementById('myChart').getContext('2d');
-            new Chart(barCtx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Produits Vendus',
-                            data: produitsVendus,
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Produits Invendus',
-                            data: produitsInvendus,
-                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { enabled: true }
-                    },
-                    scales: {
-                        x: { ticks: { color: '#333' } },
-                        y: { beginAtZero: true, ticks: { color: '#333' } }
-                    }
-                }
-            });
-        }
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js n\'est pas chargé correctement');
+        return;
+    }
 
-        // Graphique en courbe
-        function createLineChart() {
-            const ventesParJour = @json($ventesParJour);
-            const dates = ventesParJour.map(vente => vente.date);
-            const ventes = ventesParJour.map(vente => vente.ventes);
-            const invendus = ventesParJour.map(vente => vente.invendus);
+    // Configuration globale de Chart.js
+    Chart.defaults.color = '#4b5563';
+    Chart.defaults.font.family = '"Inter", system-ui, -apple-system, sans-serif';
+    Chart.defaults.font.size = 13;
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(17, 24, 39, 0.95)';
+    Chart.defaults.plugins.tooltip.titleColor = '#fff';
+    Chart.defaults.plugins.tooltip.bodyColor = '#fff';
+    Chart.defaults.plugins.tooltip.borderColor = 'rgba(255, 255, 255, 0.1)';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.cornerRadius = 6;
 
-            const lineCtx = document.getElementById('lineChart').getContext('2d');
-            new Chart(lineCtx, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [
-                        {
-                            label: 'Ventes',
-                            data: ventes,
-                            borderColor: 'rgba(34, 197, 94, 1)',
-                            borderWidth: 2,
-                            tension: 0.3,
-                            fill: false,
-                            pointBackgroundColor: 'rgba(34, 197, 94, 1)'
-                        },
-                        {
-                            label: 'Invendus',
-                            data: invendus,
-                            borderColor: 'rgba(239, 68, 68, 1)',
-                            borderWidth: 2,
-                            tension: 0.3,
-                            fill: false,
-                            pointBackgroundColor: 'rgba(239, 68, 68, 1)'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { enabled: true }
-                    },
-                    scales: {
-                        x: { ticks: { color: '#333' } },
-                        y: { beginAtZero: true, ticks: { color: '#333' } }
-                    }
-                }
-            });
-        }
+    // Palette de couleurs professionnelle (40% bleu, 5% vert, 5% autres)
+    const blueColors = [
+        'rgba(37, 99, 235, 1)', // bleu principal
+        'rgba(59, 130, 246, 1)',
+        'rgba(96, 165, 250, 1)',
+        'rgba(147, 197, 253, 1)',
+    ];
 
-        // Graphique circulaire
-        window.onload = function () {
-    function createPieChart() {
-        const productNames = @json($productNames);
-        const productSales = @json($productSales);
+    const greenColors = ['rgba(16, 185, 129, 1)']; // 5% vert
 
-        console.log("Product Names:", productNames);
-        console.log("Product Sales:", productSales);
+    const otherColors = ['rgba(249, 115, 22, 1)']; // 5% autres (orange)
 
-        // Calcul du total des ventes
-        const totalSales = productSales.reduce((acc, val) => acc + Number(val), 0);
-        const percentages = productSales.map(value => ((Number(value) / totalSales) * 100).toFixed(2));
-
-
-        console.log("Percentages:", percentages);
-
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        if (!ctx) {
-            console.error("Canvas element not found!");
-            return;
-        }
+    // Fonction pour créer le graphique en courbe
+    function createLineChart() {
+        const data = @json($ventesParJour);
+        const ctx = document.getElementById('lineChart');
+        if (!ctx) return;
 
         new Chart(ctx, {
-            type: 'doughnut',
+            type: 'line',
             data: {
-                labels: productNames,
+                labels: data.map(item => formatDate(item.date)),
                 datasets: [{
-                    data: percentages,
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-                    hoverOffset: 4
+                    label: 'Ventes',
+                    data: data.map(item => item.ventes),
+                    borderColor: blueColors[0],
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.2,
+                    borderWidth: 3,
+                    pointRadius: 3,
+                    pointBackgroundColor: blueColors[0]
+                }, {
+                    label: 'Invendus',
+                    data: data.map(item => item.invendus),
+                    borderColor: greenColors[0],
+                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                    fill: true,
+                    tension: 0.2,
+                    borderWidth: 3,
+                    pointRadius: 3,
+                    pointBackgroundColor: greenColors[0]
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
-                    legend: { position: 'bottom' },
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 20
+                        }
+                    },
                     tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return context.label + ': ' + context.raw + '%';
-                            }
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            precision: 0
                         }
                     }
                 }
@@ -256,14 +176,117 @@
         });
     }
 
+    // Fonction pour créer le graphique circulaire (pie, non doughnut)
+    function createPieChart() {
+        const ctx = document.getElementById('salesChart');
+        if (!ctx) return;
+
+        const data = {
+            labels: @json($productNames),
+            datasets: [{
+                data: @json($productSales),
+                backgroundColor: [...blueColors, ...greenColors, ...otherColors],
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        };
+
+        new Chart(ctx, {
+            type: 'pie', // Utilise pie au lieu de doughnut pour un cercle plein
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Fonction pour créer le graphique en barres
+    function createBarChart() {
+        const data = @json($produits);
+        const ctx = document.getElementById('myChart');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(item => item.produit_nom),
+                datasets: [{
+                    label: 'Vendus',
+                    data: data.map(item => item.total_quantite_vendu),
+                    backgroundColor: blueColors[0],
+                    borderColor: 'transparent',
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.7
+                }, {
+                    label: 'Invendus',
+                    data: data.map(item => item.total_quantite_invendu),
+                    backgroundColor: otherColors[0],
+                    borderColor: 'transparent',
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 20
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Fonction utilitaire pour formater les dates
+    function formatDate(dateString) {
+        const options = { day: 'numeric', month: 'short' };
+        return new Date(dateString).toLocaleDateString('fr-FR', options);
+    }
+
+    // Initialisation des graphiques
+    createLineChart();
     createPieChart();
-};
-
-
-        // Initialiser les graphiques
-        createBarChart();
-        createLineChart();
-    </script>
-</body>
-
-</html>
+    createBarChart();
+});
+</script>
+@endsection

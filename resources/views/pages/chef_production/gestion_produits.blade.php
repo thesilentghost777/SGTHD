@@ -1,6 +1,6 @@
-@extends('layouts.app')
+@extends('pages.chef_production.chef_production_default')
 
-@section('content')
+@section('page-content')
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-lg p-6">
         <h1 class="text-2xl font-bold mb-6">Gestion des Produits</h1>

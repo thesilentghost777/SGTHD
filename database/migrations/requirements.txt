@@ -1,0 +1,2234 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique()->nullable();
+            $table->date('date_naissance')->nullable();
+            $table->integer('code_secret')->nullable();
+            $table->string('secteur', 50)->nullable();
+            $table->string('role', 50)->nullable();
+            $table->string('num_tel', 15)->nullable();
+            $table->integer('avance_salaire')->default(0)->nullable();
+            $table->year('annee_debut_service')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('sessions');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+            $table->integer('expiration');
+        });
+
+        Schema::create('cache_locks', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('cache');
+        Schema::dropIfExists('cache_locks');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('job_batches', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
+            $table->integer('total_jobs');
+            $table->integer('pending_jobs');
+            $table->integer('failed_jobs');
+            $table->longText('failed_job_ids');
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
+        });
+
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('jobs');
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('avance_salaires', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('id_employe')->constrained('users')->onDelete('cascade');
+            $table->decimal('sommeAs', 10, 2);
+            $table->boolean('flag')->default(false);
+            $table->boolean('retrait_demande')->default(false);
+            $table->boolean('retrait_valide')->default(false);
+            $table->date('mois_as')->default(now());
+            $table->timestamps();
+            
+            // Un employé ne peut avoir qu'une seule avance en cours
+            $table->unique('id_employe');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('avance_salaires');
+    }
+};<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('salaires', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('id_employe')->constrained('users')->onDelete('cascade');
+            $table->decimal('somme', 10, 2);
+            $table->boolean('flag')->default(false);
+            $table->boolean('retrait_demande')->default(false);
+            $table->boolean('retrait_valide')->default(false);
+            $table->date('mois_salaire')->default(now());
+            $table->timestamps();
+
+            // Un employé ne peut avoir qu'un seul salaire
+            $table->unique('id_employe');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('salaires');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('bag_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('bag_id')->constrained()->onDelete('cascade');
+            $table->enum('type', ['received', 'sold']);
+            $table->integer('quantity');
+            $table->date('transaction_date');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('bag_transactions');
+    }
+};<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('bags', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->decimal('price', 10, 2);
+            $table->integer('stock_quantity');
+            $table->integer('alert_threshold')->default(100);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('bags');
+    }
+};<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /*depense faite par le chef de production*/
+    public function up()
+    {
+        Schema::create('depenses', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('auteur');
+            $table->string('nom');
+            $table->decimal('prix', 15, 2);
+            $table->enum('type', ['achat_matiere', 'livraison_matiere', 'reparation', 'depense_fiscale', 'autre']);
+            $table->unsignedBigInteger('idm')->nullable();
+            $table->date('date');
+            $table->boolean('valider')->default(true);
+            $table->timestamps();
+            $table->foreign('auteur')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('idm')->references('id')->on('Matiere')->onDelete('set null');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('depenses');
+    }
+};
+<?php
+
+use App\Enums\UniteMinimale;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('Matiere', function (Blueprint $table) {
+            $table->id();
+            $table->string('nom');
+            $table->string('unite_minimale'); // Changé de enum à string
+            $table->string('unite_classique');
+            $table->decimal('quantite_par_unite', 10, 3);
+            $table->decimal('quantite', 10, 2);
+            $table->decimal('prix_unitaire', 10, 2);
+            $table->decimal('prix_par_unite_minimale', 10, 4);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('Matiere');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Facture', function (Blueprint $table) {
+            $table->unsignedBigInteger('code_fac')->autoIncrement();
+            $table->unsignedBigInteger('matiere')->nullable();
+            $table->unsignedBigInteger('chef_production');
+            $table->dateTime('date');
+            $table->foreign('matiere')->references('id')->on('Matiere')->onDelete('cascade');
+            $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Facture');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('Versement_chef', function (Blueprint $table) {
+            $table->unsignedBigInteger('code_vc')->autoIncrement();
+            $table->unsignedBigInteger('chef_production');
+            $table->string('libelle', 255);
+            $table->integer('montant');
+            $table->boolean('status')->default(0); // 0: En attente, 1: Validé
+            $table->date('date');
+            $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('Versement_chef');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Produit_recu', function (Blueprint $table) {
+            $table->unsignedBigInteger('code_produit')->autoIncrement();
+            $table->unsignedBigInteger('pointeur');
+            $table->unsignedBigInteger('produit');
+            $table->smallInteger('prix');
+            $table->smallInteger('quantite');
+            $table->date('date');
+            $table->foreign('pointeur')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Produit_recu');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Evenement', function (Blueprint $table) {
+            $table->unsignedBigInteger('code_even')->autoIncrement();
+            $table->string('libelle', 1000);
+            $table->date('date');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Evenement');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Porter', function (Blueprint $table) {
+            $table->id('id');
+            $table->unsignedBigInteger('matiere');
+            $table->unsignedBigInteger('facture');
+            $table->tinyInteger('quantite');
+            $table->foreign('matiere')->references('id')->on('Matiere')->onDelete('cascade');
+            $table->foreign('facture')->references('code_fac')->on('Facture')->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Porter');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+{
+    Schema::create('Utilisation', function (Blueprint $table) {
+        $table->id();
+        $table->string('id_lot', 20);
+        $table->index('id_lot');
+        $table->unsignedBigInteger('produit');  // Type correspond maintenant à code_produit
+        $table->unsignedBigInteger('matierep');
+        $table->unsignedBigInteger('producteur');
+        $table->decimal('quantite_produit', 10, 2);
+        $table->decimal('quantite_matiere', 10, 3);
+        $table->string('unite_matiere');
+        $table->timestamps();
+
+        $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+        $table->foreign('matierep')->references('id')->on('Matiere');
+        $table->foreign('producteur')->references('id')->on('users');
+    });
+}
+
+ /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Utilisation');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Horaire', function (Blueprint $table) {
+            $table->bigInteger('id')->autoIncrement();
+            $table->unsignedBigInteger('employe')->nullable();
+            $table->dateTime('arrive')->nullable();
+            $table->dateTime('depart')->nullable();
+            $table->foreign('employe')->references('id')->on('users')->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Horaire');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Commande', function (Blueprint $table) {
+            $table->bigInteger('id')->autoIncrement();
+            $table->string('libelle', 50);
+            $table->dateTime('date_commande');
+            $table->unsignedBigInteger('produit')->nullable();
+            $table->integer('quantite');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
+            $table->string('categorie');
+            $table->boolean('valider')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Commande');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Complexe', function (Blueprint $table) {
+            $table->unsignedBigInteger('id_comp');
+            $table->string('nom', 50);
+            $table->string('localisation', 50);
+            $table->bigInteger('revenu_mensuel')->default(0);
+            $table->bigInteger('revenu_annuel')->default(0);
+            $table->bigInteger('solde')->default(0);
+            $table->$table->bigInteger('caisse_sociale')->nullable()->default(0);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('Complexe');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Produit_fixes', function (Blueprint $table) {
+            $table->id('code_produit');  // Utilise id() qui crée un unsignedBigInteger AUTO_INCREMENT
+            $table->string('nom', 50);
+            $table->smallInteger('prix');
+            $table->string('categorie');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        //
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Daily_assignments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('chef_production');
+            $table->unsignedBigInteger('producteur');
+            $table->unsignedBigInteger('produit');
+            $table->integer('expected_quantity');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
+            $table->foreign('chef_production')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('producteur')->references('id')->on('users')->onDelete('cascade');
+            $table->date('assignment_date');
+            $table->Integer('status');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        //
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('Production_suggerer_par_jour', function (Blueprint $table) {
+            $table->id('id');
+            $table->unsignedBigInteger('produit');
+            $table->integer('quantity');
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+            $table->string('day');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        //
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateTransactionVentesTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('transaction_ventes', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('produit')->nullable();
+            $table->tinyInteger('serveur')->nullable();
+            $table->Integer('quantite');
+            $table->Integer('prix')->nullable();
+            $table->date('date_vente')->nullable();
+            $table->string('type');
+            $table->string('monnaie')->nullable();
+            $table->timestamps();
+            $table->foreign('produit')->references('code_produit')->on('produit_fixes')
+            ->onDelete('cascade');
+            $table->foreign('serveur')->references('id')->on('users')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('transaction_ventes');
+    }
+}
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateMessagesTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('Message', function (Blueprint $table) {
+            $table->id();
+            $table->string('message');
+            $table->string('type');
+            $table->date('date_message');
+            $table->string('name');
+            $table->boolean('read')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('messages');
+    }
+}
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('Acouper', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('id_employe');
+            $table->bigInteger('manquants')->default(0);
+            $table->bigInteger('remboursement')->default(0);
+            $table->bigInteger('pret')->default(0);
+            $table->integer('caisse_sociale')->default(0);
+            $table->date('date');
+            $table->foreign('id_employe')->references('id')->on('users')->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('acouper');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('Prime', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('id_employe')->constrained('users')->onDelete('cascade');
+            $table->string('libelle');
+            $table->integer('montant');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('Prime');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('Matiere_recommander', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('produit');
+            $table->unsignedBigInteger('matierep');
+            $table->Integer('quantitep');
+            $table->decimal('quantite', 10, 3);
+            $table->string('unite');
+            $table->timestamps();
+            $table->foreign('produit')->references('code_produit')->on('Produit_fixes');
+            $table->foreign('matierep')->references('id')->on('Matiere');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('Matiere_recommander');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('Reservations_mp', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('producteur_id')->constrained('users');
+            $table->foreignId('matiere_id')->constrained('Matiere');
+            $table->decimal('quantite_demandee', 10, 3);
+            $table->string('unite_demandee');
+            $table->enum('statut', ['en_attente', 'approuvee', 'refusee'])->default('en_attente');
+            $table->text('commentaire')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('Reservations_mp');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+{
+    Schema::create('assignations_matiere', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('producteur_id')->constrained('users');
+        $table->foreignId('matiere_id')->constrained('Matiere');
+        $table->decimal('quantite_assignee', 10, 3);
+        $table->string('unite_assignee');
+        $table->decimal('quantite_restante', 10, 3);
+        $table->timestamp('date_limite_utilisation')->nullable();
+        $table->timestamps();
+    });
+}
+
+
+    public function down(): void
+    {
+        Schema::dropIfExists('assignations_matiere');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('produit_stocks', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('id_produit');
+            $table->foreign('id_produit')->references('code_produit')->on('Produit_fixes')->onDelete('cascade');
+            $table->integer('quantite_en_stock')->default(0);
+            $table->integer('quantite_invendu')->default(0);
+            $table->integer('quantite_avarie')->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('produit_stocks');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('plannings', function (Blueprint $table) {
+            $table->id();
+            $table->string('libelle');
+            $table->unsignedBigInteger('employe');
+            $table->enum('type', ['tache', 'repos']);
+            $table->date('date');
+            $table->time('heure_debut')->nullable();
+            $table->time('heure_fin')->nullable();
+            $table->timestamps();
+
+            $table->foreign('employe')->references('id')->on('users')->onDelete('cascade');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('plannings');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('evaluations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->decimal('note', 4, 2);
+            $table->text('appreciation');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('evaluations');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('repos_conges', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('employe_id')->constrained('users')->onDelete('cascade');
+            $table->enum('jour', ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']);
+            $table->integer('conges')->nullable();
+            $table->date('debut_c')->nullable();
+            $table->enum('raison_c', ['maladie', 'evenement', 'accouchement', 'autre'])->nullable();
+            $table->text('autre_raison')->nullable();
+            $table->timestamps();
+
+            // Ensure one entry per employee
+            $table->unique('employe_id');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('repos_conges');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('Extra', function (Blueprint $table) {
+            $table->id();
+            $table->string('secteur', 50);
+            $table->time('heure_arriver_adequat');
+            $table->time('heure_depart_adequat');
+            $table->decimal('salaire_adequat', 10, 2);
+            $table->text('interdit')->nullable();
+            $table->text('regles')->nullable();
+            $table->integer('age_adequat');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('EXTRA');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('delis', function (Blueprint $table) {
+            $table->id();
+            $table->string('nom');
+            $table->text('description');
+            $table->decimal('montant', 10, 2);
+            $table->timestamps();
+        });
+
+        Schema::create('deli_user', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('deli_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->date('date_incident');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('deli_user');
+        Schema::dropIfExists('delis');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('categories', function (Blueprint $table) {
+            $table->id(); // Colonne 'id' (clé primaire auto-incrémentée)
+            $table->string('name'); // Colonne 'name' (nom de la catégorie) (sac,salaire,as,materiel,reparation,matiere_premiere,transport,supermarche,vente,autre)
+    });
+
+        Schema::create('transactions', function (Blueprint $table) {
+            $table->id(); // Colonne 'id' (clé primaire auto-incrémentée)
+            $table->enum('type', ['income', 'outcome']); // Colonne 'type' (ENUM pour 'income' ou 'outcome')
+            $table->unsignedBigInteger('category_id'); // Colonne 'category_id' (clé étrangère)
+            $table->decimal('amount', 10, 2); // Colonne 'amount' (DECIMAL avec 10 chiffres au total et 2 décimales)
+            $table->dateTime('date'); // Colonne 'date' (DATETIME)
+            $table->text('description')->nullable(); // Colonne 'description' (TEXT, facultative)
+            $table->timestamps(); // Colonnes 'created_at' et 'updated_at' (TIMESTAMP)
+
+            // Clé étrangère pour 'category_id' référençant la table 'categories'
+            $table->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
+    });
+
+
+}
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('categories');
+        Schema::dropIfExists('transactions');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('stagiaires', function (Blueprint $table) {
+            $table->id();
+            $table->string('nom');
+            $table->string('prenom');
+            $table->string('email')->unique();
+            $table->string('telephone');
+            $table->string('ecole');
+            $table->string('niveau_etude');
+            $table->string('filiere');
+            $table->date('date_debut');
+            $table->date('date_fin');
+            $table->string('departement');
+            $table->text('nature_travail');
+            $table->decimal('remuneration', 10, 2)->default(0);
+            $table->text('appreciation')->nullable();
+            $table->enum('type_stage', ['academique', 'professionnel']);
+            $table->boolean('rapport_genere')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('stagiaires');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('announcements', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('content');
+            $table->foreignId('user_id')->constrained(); // L'ID du DG qui a créé l'annonce
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('announcements');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('reactions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('announcement_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained();
+            $table->text('comment');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('reactions');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('produits_recu_1', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('produit_id');
+            $table->foreign('produit_id')->references('code_produit')->on('Produit_fixes');
+            $table->integer('quantite');
+            $table->unsignedBigInteger('producteur_id');
+            $table->foreign('producteur_id')->references('id')->on('users');
+            $table->unsignedBigInteger('pointeur_id');
+            $table->foreign('pointeur_id')->references('id')->on('users');
+            $table->dateTime('date_reception');
+            $table->text('remarques')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('produits_recus');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+
+use Illuminate\Database\Schema\Blueprint;
+
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+
+{
+
+    /**
+
+     * Run the migrations.
+
+     */
+
+    public function up(): void
+
+    {
+
+        Schema::create('bag_assignments', function (Blueprint $table) {
+
+            $table->id();
+
+            $table->foreignId('bag_id')->constrained()->onDelete('cascade');
+
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+
+            $table->integer('quantity_assigned');
+
+            $table->text('notes')->nullable();
+
+            $table->timestamps();
+
+        });
+
+    }
+
+    /**
+
+     * Reverse the migrations.
+
+     */
+
+    public function down(): void
+
+    {
+
+        Schema::dropIfExists('bag_assignments');
+
+    }
+
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+
+use Illuminate\Database\Schema\Blueprint;
+
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+
+{
+
+    /**
+
+     * Run the migrations.
+
+     */
+
+    public function up(): void
+
+    {
+
+        Schema::create('bag_receptions', function (Blueprint $table) {
+
+            $table->id();
+
+            $table->foreignId('bag_assignment_id')->constrained()->onDelete('cascade');
+
+            $table->integer('quantity_received');
+
+            $table->text('notes')->nullable();
+
+            $table->timestamps();
+
+        });
+
+    }
+
+    /**
+
+     * Reverse the migrations.
+
+     */
+
+    public function down(): void
+
+    {
+
+        Schema::dropIfExists('bag_receptions');
+
+    }
+
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('bag_sales', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('bag_reception_id')->constrained()->onDelete('cascade');
+            $table->integer('quantity_sold');
+            $table->integer('quantity_unsold');
+            $table->text('notes')->nullable();
+            $table->boolean('is_recovered')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('bag_sales');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('configurations', function (Blueprint $table) {
+            $table->id();
+            $table->boolean('first_config')->default(false);
+            $table->boolean('flag1')->default(false);
+            $table->boolean('flag2')->default(false);
+            $table->boolean('flag3')->default(false);
+            $table->boolean('flag4')->default(false);
+            $table->timestamps();
+        });
+
+        // Insérer un enregistrement par défaut avec toutes les valeurs à false (0)
+        DB::table('configurations')->insert([
+            'first_config' => false,
+            'flag1' => false,
+            'flag2' => false,
+            'flag3' => false,
+            'flag4' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('configurations');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('solde_cp', function (Blueprint $table) {
+            $table->id();
+            $table->decimal('montant', 15, 2)->default(0);
+            $table->date('derniere_mise_a_jour');
+            $table->text('description')->nullable();
+            $table->timestamps();
+        });
+
+        // Insertion d'un solde initial
+        DB::table('solde_cp')->insert([
+            'montant' => 0,
+            'derniere_mise_a_jour' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('solde_cp');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('historique_solde_cp', function (Blueprint $table) {
+            $table->id();
+            $table->decimal('montant', 15, 2);
+            $table->enum('type_operation', ['versement', 'depense', 'ajustement']);
+            $table->unsignedBigInteger('operation_id')->nullable();
+            $table->decimal('solde_avant', 15, 2);
+            $table->decimal('solde_apres', 15, 2);
+            $table->unsignedBigInteger('user_id');
+            $table->text('description')->nullable();
+            $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('historique_solde_cp');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('manquant_temporaire', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('employe_id');
+            $table->foreign('employe_id')->references('id')->on('users')->onDelete('cascade');
+            $table->bigInteger('montant')->default(0);
+            $table->text('explication')->nullable();
+            $table->enum('statut', ['en_attente', 'ajuste', 'valide'])->default('en_attente');
+            $table->text('commentaire_dg')->nullable();
+            $table->unsignedBigInteger('valide_par')->nullable();
+            $table->foreign('valide_par')->references('id')->on('users')->onDelete('set null');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('manquant_temporaire');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('matiere_complexe', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('matiere_id');
+            $table->decimal('prix_complexe', 10, 2)->nullable();
+            $table->timestamps();
+
+            $table->foreign('matiere_id')->references('id')->on('Matiere')->onDelete('cascade');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('matiere_complexe');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('factures_complexe', function (Blueprint $table) {
+            $table->id();
+            $table->string('reference')->unique();
+            $table->unsignedBigInteger('producteur_id');
+            $table->foreign('producteur_id')->references('id')->on('users');
+            $table->string('id_lot')->nullable();
+            $table->decimal('montant_total', 10, 2);
+            $table->string('statut')->default('en_attente'); // en_attente, validee, annulee
+            $table->date('date_creation');
+            $table->date('date_validation')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('facture_complexe_details', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('facture_id');
+            $table->foreign('facture_id')->references('id')->on('factures_complexe')->onDelete('cascade');
+            $table->unsignedBigInteger('matiere_id');
+            $table->foreign('matiere_id')->references('id')->on('Matiere');
+            $table->unsignedBigInteger('assignation_id');
+            $table->foreign('assignation_id')->references('id')->on('assignations_matiere')->onDelete('cascade');
+            $table->decimal('quantite', 10, 3);
+            $table->string('unite');
+            $table->decimal('prix_unitaire', 10, 2);
+            $table->decimal('montant', 10, 2);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('facture_complexe_details');
+        Schema::dropIfExists('factures_complexe');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('assignation_factures', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('assignation_id');
+            $table->foreign('assignation_id')->references('id')->on('assignations_matiere')->onDelete('cascade');
+            $table->unsignedBigInteger('facture_id');
+            $table->foreign('facture_id')->references('id')->on('factures_complexe')->onDelete('cascade');
+            $table->timestamps();
+
+            // Index unique pour éviter les doublons
+            $table->unique(['assignation_id', 'facture_id']);
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('assignation_factures');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('cashier_sessions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users');
+            $table->dateTime('start_time');
+            $table->dateTime('end_time')->nullable();
+            $table->decimal('initial_cash', 12, 2);
+            $table->decimal('initial_change', 12, 2);
+            $table->decimal('initial_mobile_balance', 12, 2);
+            $table->decimal('final_cash', 12, 2)->nullable();
+            $table->decimal('final_change', 12, 2)->nullable();
+            $table->decimal('final_mobile_balance', 12, 2)->nullable();
+            $table->decimal('cash_remitted', 12, 2)->nullable();
+            $table->decimal('total_withdrawals', 12, 2)->default(0);
+            $table->decimal('discrepancy', 12, 2)->nullable();
+            $table->text('notes')->nullable();
+            $table->text('end_notes')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('cashier_sessions');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('cash_withdrawals', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('cashier_session_id')->constrained('cashier_sessions')->onDelete('cascade');
+            $table->decimal('amount', 12, 2);
+            $table->string('reason');
+            $table->string('withdrawn_by');
+            $table->dateTime('created_at');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('cash_withdrawals');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('produits', function (Blueprint $table) {
+            $table->id();
+            $table->string('nom');
+            $table->string('reference')->unique();
+            $table->enum('type', ['magasin', 'boisson']);
+            $table->integer('quantite')->default(0);
+            $table->decimal('prix_unitaire', 10, 2);
+            $table->integer('seuil_alerte')->default(5);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('produits');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('mouvements_stock', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('produit_id')->constrained('produits')->onDelete('cascade');
+            $table->enum('type', ['entree', 'sortie']);
+            $table->integer('quantite');
+            $table->foreignId('user_id')->constrained('users');
+            $table->string('motif');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('mouvements_stock');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('inventaires', function (Blueprint $table) {
+            $table->id();
+            $table->date('date_inventaire');
+            $table->foreignId('produit_id')->constrained('produits');
+            $table->integer('quantite_theorique');
+            $table->integer('quantite_physique');
+            $table->decimal('valeur_manquant', 10, 2);
+            $table->foreignId('user_id')->constrained('users');
+            $table->text('commentaire')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('inventaires');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('product_groups', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('product_groups');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('products', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('type');
+            $table->decimal('price', 10, 2);
+            $table->foreignId('product_group_id')->constrained()->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('products');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('missing_calculations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('product_group_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->date('date');
+            $table->string('title');
+            $table->enum('status', ['open', 'closed'])->default('open');
+            $table->decimal('total_amount', 15, 2)->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('missing_calculations');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('missing_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('missing_calculation_id')->constrained()->onDelete('cascade');
+            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->integer('expected_quantity');
+            $table->integer('actual_quantity');
+            $table->integer('missing_quantity');
+            $table->decimal('amount', 15, 2);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('missing_items');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('cash_distributions', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id'); // Vendeuse
+            $table->date('date');
+            $table->decimal('bill_amount', 15, 2); // Montant en billets
+            $table->decimal('initial_coin_amount', 15, 2); // Montant initial en monnaie
+            $table->decimal('final_coin_amount', 15, 2)->nullable(); // Montant final en monnaie déclaré
+            $table->decimal('deposited_amount', 15, 2)->nullable(); // Montant versé
+            $table->decimal('sales_amount', 15, 2)->default(0); // Montant des ventes
+            $table->decimal('missing_amount', 15, 2)->nullable(); // Montant manquant calculé
+            $table->enum('status', ['en_cours', 'cloture'])->default('en_cours');
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('closed_by')->nullable(); // Admin qui a clôturé
+            $table->timestamp('closed_at')->nullable();
+            $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('closed_by')->references('id')->on('users')->onDelete('set null');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('cash_distributions');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('loan_requests', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->bigInteger('amount');
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        });
+
+        Schema::create('loan_repayments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->bigInteger('amount');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('loan_repayments');
+        Schema::dropIfExists('loan_requests');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('factures_complexe', function (Blueprint $table) {
+            $table->id();
+            $table->string('reference')->unique();
+            $table->unsignedBigInteger('producteur_id');
+            $table->foreign('producteur_id')->references('id')->on('users');
+            $table->string('id_lot')->nullable();
+            $table->decimal('montant_total', 10, 2);
+            $table->string('statut')->default('en_attente'); // en_attente, validee, annulee
+            $table->date('date_creation');
+            $table->date('date_validation')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('facture_complexe_details', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('facture_id');
+            $table->foreign('facture_id')->references('id')->on('factures_complexe')->onDelete('cascade');
+            $table->unsignedBigInteger('matiere_id');
+            $table->foreign('matiere_id')->references('id')->on('Matiere');
+            $table->decimal('quantite', 10, 3);
+            $table->string('unite');
+            $table->decimal('prix_unitaire', 10, 2);
+            $table->decimal('montant', 10, 2);
+            $table->timestamps();
+        });
+
+        Schema::create('matiere_complexe', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('matiere_id');
+            $table->decimal('prix_complexe', 10, 2)->nullable(); // prix d'une unité dans le complexe
+            $table->timestamps();
+
+            $table->foreign('matiere_id')->references('id')->on('Matiere')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('facture_complexe_details');
+        Schema::dropIfExists('factures_complexe');
+        Schema::dropIfExists('matiere_complexe');
+    }
+};<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('recipe_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('description')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('recipe_categories');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('recipes', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->integer('preparation_time')->nullable(); // in minutes
+            $table->integer('cooking_time')->nullable(); // in minutes
+            $table->integer('rest_time')->nullable(); // in minutes
+            $table->integer('yield_quantity')->nullable(); // how many items this recipe produces
+            $table->string('difficulty_level')->nullable(); // e.g. easy, medium, hard
+            $table->foreignId('category_id')->nullable()->constrained('recipe_categories')->onDelete('set null');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // who created this recipe
+            $table->boolean('active')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('recipes');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('ingredients', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('unit')->nullable(); // e.g. g, kg, ml, l, cup, tbsp, etc.
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('ingredients');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('recipe_ingredients', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('recipe_id')->constrained()->onDelete('cascade');
+            $table->foreignId('ingredient_id')->constrained()->onDelete('cascade');
+            $table->decimal('quantity', 10, 2);
+            $table->string('unit')->nullable();
+            $table->text('notes')->nullable();
+            $table->integer('order')->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('recipe_ingredients');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('recipe_steps', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('recipe_id')->constrained()->onDelete('cascade');
+            $table->integer('step_number');
+            $table->text('instruction');
+            $table->text('tips')->nullable();
+            $table->integer('time_required')->nullable(); // in minutes
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('recipe_steps');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('rations', function (Blueprint $table) {
+            $table->id();
+            $table->decimal('montant_defaut', 10, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('employee_rations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('employee_id')->constrained('users')->onDelete('cascade');
+            $table->decimal('montant', 10, 2);
+            $table->boolean('personnalise')->default(false);
+            $table->timestamps();
+        });
+
+        Schema::create('ration_claims', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('employee_id')->constrained('users')->onDelete('cascade');
+            $table->date('date_reclamation');
+            $table->decimal('montant', 10, 2);
+            $table->dateTime('heure_reclamation');
+            $table->unique(['employee_id', 'date_reclamation']);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('ration_claims');
+        Schema::dropIfExists('employee_rations');
+        Schema::dropIfExists('rations');
+    }
+};
+#!/bin/bash
+path="./"
+
+# Parcours tous les fichiers du répertoire
+for file in "$path"/* ; do
+    # Vérifie si c'est un fichier régulier
+    if [ -f "$file" ]; then
+        cat "$file" >> requirements.txt
+    fi
+done
