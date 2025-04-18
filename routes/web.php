@@ -116,6 +116,8 @@ Route::get('pointeur/dashboard', [PointeurController::class, 'dashboard'])->name
 
 Route::get('glace/dashboard', [GlaceController::class, 'dashboard'])->name('glace-dashboard');
 require __DIR__.'/auth.php';
+require __DIR__.'/api.php';
+
 
 //Route::get('producteur/dashboard', [ProducteurController::class, 'dashboard'])->name('producteur-dashboard');
 Route::get('/producteur/produit', [ProducteurController::class,'produit'])->name('producteur.workspace');
@@ -259,7 +261,7 @@ Route::get('/producteur/mes-assignations', [AssignationMatiereController::class,
         Route::get('/api/produits/{produit}', [StockController::class, 'getProduit'])->name('stock.get-produit');
     });
     Route::get('/manquant/create', [Chef_productionController::class, 'createmanquant'])->name('manquant.create');
-    Route::post('/manquant/store', [Chef_productionController::class, 'storemanquant'])->name('manquant.store');
+    Route::post('/manquant/store', [Chef_productionController::class, 'storemanquant2'])->name('manquant.store');
     Route::get('/assignation/matiere', [AssignationMatiereController::class, 'index'])
         ->name('chef.assignations.create');
     Route::post('/chef/assignations', [AssignationMatiereController::class, 'store'])

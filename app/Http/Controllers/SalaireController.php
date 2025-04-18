@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Prime;
 use App\Models\ACouper;
 use App\Models\Deli;
+use App\Models\Evaluation;
 use App\Models\DeliUser;
 use App\Models\Complexe;
+use App\Models\ManquantTemporaire;
 use Carbon\Carbon;
 use App\Traits\HistorisableActions;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -153,33 +155,54 @@ public function store_validation(Request $request)
     ]);
 
     $as = AvanceSalaire::findOrFail($request->as_id);
-    $as->flag = $request->decision;
-    $as->save();
 
-    // Récupérer l'employé concerné
-    $employe = User::findOrFail($as->id_employe);
+    // Si la décision est refusée (0), supprimer l'entrée
+    if ($request->decision == 0) {
+        // Récupérer l'employé concerné avant de supprimer
+        $employe = User::findOrFail($as->id_employe);
 
-    // Préparer le message de notification selon la décision
-    $sujet = $request->decision
-        ? "Demande d'avance sur salaire approuvée"
-        : "Demande d'avance sur salaire refusée";
+        // Préparer le message de notification
+        $sujet = "Demande d'avance sur salaire refusée";
+        $message = "Votre demande d'avance sur salaire d'un montant de {$as->sommeAs} a été refusée. Veuillez contacter votre responsable pour plus d'informations.";
 
-    $message = $request->decision
-        ? "Votre demande d'avance sur salaire d'un montant de {$as->sommeAs} a été approuvée. Le montant sera disponible selon les modalités habituelles."
-        : "Votre demande d'avance sur salaire d'un montant de {$as->sommeAs} a été refusée. Veuillez contacter votre responsable pour plus d'informations.";
+        // Historiser l'action avant suppression
+        $currentUser = auth()->user();
+        $this->historiser("L'utilisateur {$currentUser->name} a refusé la demande d'avance sur salaire de {$employe->name}", 'validation_avance');
 
-    // Envoyer la notification à l'employé
-    $notificationRequest = new Request([
-        'recipient_id' => $as->id_employe,
-        'subject' => $sujet,
-        'message' => $message
-    ]);
-    $this->notificationController->send($notificationRequest);
+        // Envoyer la notification à l'employé
+        $notificationRequest = new Request([
+            'recipient_id' => $as->id_employe,
+            'subject' => $sujet,
+            'message' => $message
+        ]);
+        $this->notificationController->send($notificationRequest);
 
-    // Historiser l'action
-    $currentUser = auth()->user();
-    $action = $request->decision ? "approuvé" : "refusé";
-    $this->historiser("L'utilisateur {$currentUser->name} a {$action} la demande d'avance sur salaire de {$employe->name}", 'validation_avance');
+        // Supprimer l'entrée
+        $as->delete();
+    } else {
+        // Si approuvée, mettre à jour le flag
+        $as->flag = $request->decision;
+        $as->save();
+
+        // Récupérer l'employé concerné
+        $employe = User::findOrFail($as->id_employe);
+
+        // Préparer le message de notification
+        $sujet = "Demande d'avance sur salaire approuvée";
+        $message = "Votre demande d'avance sur salaire d'un montant de {$as->sommeAs} a été approuvée. Le montant sera disponible selon les modalités habituelles.";
+
+        // Historiser l'action
+        $currentUser = auth()->user();
+        $this->historiser("L'utilisateur {$currentUser->name} a approuvé la demande d'avance sur salaire de {$employe->name}", 'validation_avance');
+
+        // Envoyer la notification à l'employé
+        $notificationRequest = new Request([
+            'recipient_id' => $as->id_employe,
+            'subject' => $sujet,
+            'message' => $message
+        ]);
+        $this->notificationController->send($notificationRequest);
+    }
 
     return redirect()->back()->with('success', 'Décision enregistrée et employé notifié.');
 }
@@ -436,6 +459,15 @@ public function store_validation(Request $request)
         ->where('retrait_valide', true)
         ->value('sommeAs') ?? 0;
         // Calculer le salaire net
+         // Récupérer les incidents (delis)
+         $incidents = DeliUser::where('user_id', $employe->id)
+         ->whereMonth('date_incident', $mois->month)
+         ->whereYear('date_incident', $mois->year)
+         ->with('deli')
+         ->get();
+        $totalDelis = $incidents->sum(function($incident) {
+            return $incident->deli->montant ?? 0;
+        });
         $fichePaie = [
             'salaire_base' => $salaire->somme,
             'avance_salaire' => $as,
@@ -443,12 +475,14 @@ public function store_validation(Request $request)
                 'manquants' => $deductions->manquants ?? 0,
                 'caisse_sociale' => $deductions->caisse_sociale ?? 0,
                 'remboursement' => $deductions->remboursement ?? 0,
+                'incidents' => $totalDelis,
             ],
             'primes' => $totalPrimes,
             'salaire_net' => $salaire->somme - ($as)
                             - ($deductions->manquants ?? 0)
                             - ($deductions->pret ?? 0)
                             - ($deductions->caisse_sociale ?? 0)
+                            - $totalDelis
                             + $totalPrimes
         ];
 
@@ -498,7 +532,20 @@ public function store_validation(Request $request)
 
     public function validerRetrait($id)
 {
+    #verifier si l'emplyer dispose de manquanttemporaire
+    $manquantTemporaire = ManquantTemporaire::where('employe_id', $id)->first();
+    #verifier si le manquant temporaire est valide
+    if($manquantTemporaire->valide_par == null){
+        $flag = true;
+    }else{
+        $flag = false;
+    }
+    if ($flag) {
+        return redirect()->back()->with('error', 'Impossible de valider le retrait, l\'employé a des manquants temporaires.Veuillez les traiter d\'abord.');
+    }
     return DB::transaction(function () use ($id) {
+        #verifier si il y'a encore les manquants temporaire
+
         $salaire = Salaire::where('id_employe', $id)->first();
         $acouper = ACouper::where('id_employe', $id)->first();
         $avanceSalaire = AvanceSalaire::where('id_employe', $id)->first();

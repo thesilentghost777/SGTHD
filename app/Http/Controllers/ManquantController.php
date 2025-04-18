@@ -16,9 +16,13 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Traits\HistorisableActions;
+
 
 class ManquantController extends Controller
 {
+    use HistorisableActions;
+
     /**
      * Afficher la liste des manquants temporaires pour le DG
      */
@@ -98,6 +102,8 @@ class ManquantController extends Controller
                 'date' => Carbon::now()
             ]);
         }
+        $user = User::find($manquant->employe_id);
+        $this->historiser("Le dg vient de confirmer le manquant de  {$user->name} a {$manquant->montant} XAF", 'valider_manquant_temporaire');
 
         return redirect()->route('manquants.index')
             ->with('success', 'Manquant validé et transféré avec succès');

@@ -6,9 +6,13 @@ use App\Models\SoldeCP;
 use App\Models\HistoriqueSoldeCP;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Traits\HistorisableActions;
+
 
 class SoldeCPController extends Controller
 {
+    use HistorisableActions;
+
     public function index()
     {
         $nom = auth()->user()->name;
@@ -26,7 +30,6 @@ class SoldeCPController extends Controller
         $nom = auth()->user()->name;
         $role = auth()->user()->role;
         $solde = SoldeCP::getSoldeActuel();
-
         return view('solde-cp.ajuster', compact('solde', 'nom', 'role'));
     }
 
@@ -40,14 +43,14 @@ class SoldeCPController extends Controller
 
         try {
             DB::beginTransaction();
-
+            $user = auth()->user();
             $solde = SoldeCP::getSoldeActuel();
             $montantInitial = $solde->montant;
             $nouveauMontant = $montantInitial;
             if ($validated['montant'] < 0) {
                 DB::rollBack();
                 return redirect()->back()
-                    ->with('error', 'Soyons serieux dans ce que nous faisons Le prix ne peut etre negatif')
+                    ->with('error', 'Soyons serieux dans ce que nous faisons Le montant ne peut etre negatif')
                     ->withInput();
             }
             $montantOperation = abs($validated['montant']);
@@ -57,6 +60,8 @@ class SoldeCPController extends Controller
             switch ($validated['operation']) {
                 case 'ajouter':
                     $nouveauMontant += $montantOperation;
+                    $this->historiser("L'utilisateur {$user->name} a ajouter  {$montantOperation} au solde cp", 'modify_solde_cp');
+
                     break;
 
                 case 'soustraire':
@@ -67,10 +72,13 @@ class SoldeCPController extends Controller
                             ->withInput();
                     }
                     $nouveauMontant -= $montantOperation;
+                    $this->historiser("L'utilisateur {$user->name} a soustrait  {$montantOperation} au solde cp", 'modify_solde_cp');
+
                     break;
 
                 case 'fixer':
                     $nouveauMontant = $montantOperation;
+                    $this->historiser("L'utilisateur {$user->name} a ajuster le solde cp a {$montantOperation}", 'modify_solde_cp');
                     break;
             }
 
@@ -91,7 +99,6 @@ class SoldeCPController extends Controller
                 'user_id' => auth()->id(),
                 'description' => $validated['description']
             ]);
-
             DB::commit();
 
             return redirect()->route('solde-cp.index')

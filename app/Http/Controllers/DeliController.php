@@ -9,6 +9,7 @@ use App\Traits\HistorisableActions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DeliController extends Controller
@@ -74,33 +75,6 @@ class DeliController extends Controller
                     'date_incident' => $validated['date_incident']
                 ]);
 
-                // Facturer les manquants à chaque employé
-                foreach ($validated['employes'] as $employeId) {
-                    // Montant individuel (divisé par le nombre d'employés)
-                    $montantIndividuel = $validated['montant'] / count($validated['employes']);
-
-                    // Créer ou mettre à jour l'entrée de manquant pour l'employé
-                    $manquant = ManquantTemporaire::updateOrCreate(
-                        ['employe_id' => $employeId],
-                        [
-                            'montant' => DB::raw('montant + ' . $montantIndividuel),
-                            'explication' => DB::raw("CONCAT(IFNULL(explication, ''), '\n', 'Délit: " . $validated['nom'] . " - " . $validated['description'] . "')"),
-                            'statut' => 'en_attente'
-                        ]
-                    );
-
-                    // Récupérer l'employé concerné
-                    $employe = User::findOrFail($employeId);
-
-                    // Notifier l'employé
-                    $notificationRequest = new Request([
-                        'recipient_id' => $employeId,
-                        'subject' => 'Facturation d\'un incident à votre charge',
-                        'message' => "Bonjour {$employe->name},\n\nUn incident vous a été facturé : {$validated['nom']}.\n\nDescription : {$validated['description']}.\n\nMontant : " . number_format($montantIndividuel, 0, ',', ' ') . " FCFA.\n\nDate de l'incident : " . $dateIncident->format('d/m/Y') . ".\n\nCe montant a été ajouté à vos manquants en attente."
-                    ]);
-
-                    $this->notificationController->send($notificationRequest);
-                }
             }
 
             // Notifier les responsables (PDG, DDG)

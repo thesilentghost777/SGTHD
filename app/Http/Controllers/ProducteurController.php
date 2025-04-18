@@ -438,6 +438,7 @@ public function store2(StoreUtilisationRequest $request)
         return redirect()->back()->with('error', 'Erreur lors de l\'enregistrement: ' . $e->getMessage())->withInput();
     }
 }
+
 public function comparaison(Request $request)
 {
     $employe = auth()->user();
