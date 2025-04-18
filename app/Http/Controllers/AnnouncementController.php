@@ -24,6 +24,7 @@ class AnnouncementController extends Controller
     {
         $announcements = Announcement::with(['reactions.user', 'user'])
             ->latest()
+            ->limit(3)
             ->get();
 
         if (auth()->user()->secteur === 'administration' ) {

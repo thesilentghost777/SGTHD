@@ -19,6 +19,7 @@ use App\Models\Complexe;
 use App\Models\Horaire;
 use App\Models\EmployeeRation;
 use App\Models\Ration;
+use App\Models\ManquantTemporaire;
 use App\Traits\HistorisableActions;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -67,7 +68,7 @@ class RegisteredUserController extends Controller
             'num_tel' => [
                 'required',
                 'regex:/^6[0-9]{8}$/',
-                'unique:users'
+                'uniqManquantTemporaireue:users'
             ],
             'annee_debut_service' => [
                 'required',
@@ -105,7 +106,7 @@ class RegisteredUserController extends Controller
         $this->createAcouperEntry($user);
         $this->createDefaultSchedule($user);
         $this->createDefaultRation($user);
-
+        $this->createManquantTemporaireEntry($user);
 
         $this->historiser("L'utilisateur {$user->name} a été créé avec succès", 'create');
 
@@ -266,5 +267,31 @@ class RegisteredUserController extends Controller
             'message' => "Votre âge ne correspond pas aux réglementations de l'entreprise. Veuillez vous rapprocher de la direction générale pour plus d'informations."
         ]);
         $this->notificationController->send($request);
+    }
+
+    /*creons une methode qui prends en entrer un user et creer une entrer dans la table manquant temporaire
+     Schema::create('manquant_temporaire', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('employe_id');
+            $table->foreign('employe_id')->references('id')->on('users')->onDelete('cascade');
+            $table->bigInteger('montant')->default(0);
+            $table->text('explication')->nullable();
+            $table->enum('statut', ['en_attente', 'ajuste', 'valide'])->default('en_attente');
+            $table->text('commentaire_dg')->nullable();
+            $table->unsignedBigInteger('valide_par')->nullable();
+            $table->foreign('valide_par')->references('id')->on('users')->onDelete('set null');
+            $table->timestamps();
+        });*/
+
+    private function createManquantTemporaireEntry(User $user)
+    {
+        ManquantTemporaire::create([
+            'employe_id' => $user->id,
+            'montant' => 0,
+            'explication' => null,
+            'statut' => 'en_attente',
+            'commentaire_dg' => null,
+            'valide_par' => null,
+        ]);
     }
 }

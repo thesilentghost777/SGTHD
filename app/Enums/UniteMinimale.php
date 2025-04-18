@@ -15,6 +15,22 @@ enum UniteMinimale: string
     case PINCEE = 'pincee';
     case UNITE = 'unite';
 
+    public function toString(): string
+    {
+        return match($this) {
+            self::GRAMME => 'gramme',
+            self::KILOGRAMME => 'kilogramme',
+            self::MILLILITRE => 'millilitre',
+            self::CENTILITRE => 'centilitre',
+            self::DECILITRE => 'décilitre',
+            self::LITRE => 'litre',
+            self::CUILLERE_CAFE => 'cuillère à café',
+            self::CUILLERE_SOUPE => 'cuillère à soupe',
+            self::PINCEE => 'pincée',
+            self::UNITE => 'unité'
+        };
+    }
+
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

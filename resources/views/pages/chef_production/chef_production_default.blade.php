@@ -119,7 +119,7 @@
                                 </li>
                                 <li>
                                     <a href="{{ route('manquant.create') }}" class="flex items-center p-2 rounded hover:bg-white/10">
-                                        <i class="mdi mdi-file-cog-outline mr-2"></i>Facturer un manquant à un producteur
+                                        <i class="mdi mdi-file-cog-outline mr-2"></i>Facturer un manquant à un employé
                                     </a>
                                 </li>
                                 <li>

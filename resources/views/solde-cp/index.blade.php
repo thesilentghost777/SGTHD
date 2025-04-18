@@ -38,19 +38,6 @@
 
         <!-- Statistiques rapides -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h3 class="text-gray-500 text-sm">Versements reçus</h3>
-                        <p class="text-2xl font-semibold">
-                            {{ number_format($historique->where('type_operation', 'versement')->sum('montant'), 0, ',', ' ') }} FCFA
-                        </p>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <i class="mdi mdi-cash-plus text-green-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
 
             <div class="bg-white rounded-lg shadow-md p-4">
                 <div class="flex justify-between items-start">

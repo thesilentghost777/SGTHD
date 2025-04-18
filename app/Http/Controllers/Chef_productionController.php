@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\Commande;
+use App\Models\ManquantTemporaire;
 use App\Models\Utilisation;
 use App\Models\User;
 use App\Models\Ingredient;
@@ -66,6 +67,13 @@ class Chef_productionController extends Controller
             'updated_at' => now()
         ]);
         $user = auth()->user();
+        $request->merge([
+            'recipient_id' => $user->id,
+            'subject' => 'Nouveau produit créé',
+            'message' => 'Le produit ' . $produit->nom . 'A été créé avec succès. Veuillez définir la recette pour cette dernière et les matières recommandées.'
+        ]);
+        // Appel de la méthode send
+        $this->notificationController->send($request);
         $this->historiser("L'utilisateur {$user->name} a créé le produit {$validated['nom']}", 'create_produit');
             DB::commit();
             return redirect()->back()->with('success', 'Produit ajouté avec succès');
@@ -82,6 +90,7 @@ class Chef_productionController extends Controller
                 ->withErrors(['error' => 'Erreur lors de l\'ajout du produit: ' . $e->getMessage()])
                 ->withInput();
         }
+
     }
     public function updateProduit(Request $request, $code_produit)
     {
@@ -916,10 +925,53 @@ class Chef_productionController extends Controller
 return view('pages.manquant', compact('employees','nom','role'));
     }
 
-    public function storemanquant(Request $request)
-    {
+    public function storemanquant2(Request $request)
+{
+    Log::info("entering storemanquant2 method");
+    Log::info("request data: ", $request->all());
+    // Validate the request data
+    $validated = $request->validate([
+        'employe_id' => 'required|exists:users,id',
+        'montant' => 'required|numeric|min:1',
+        'explication' => 'required|string',
+    ]);
+    Log::info("validated data: ", $validated);
 
+    try {
+        // Check if there's an existing manquant for this employee
+        $existingManquant = ManquantTemporaire::where('employe_id', $validated['employe_id'])->latest()->first();
+
+        if ($existingManquant && $existingManquant->statut === 'en_attente') {
+            // If an entry exists with status 'en_attente', update it by adding the amount
+            $existingManquant->montant += $validated['montant'];
+            $existingManquant->explication .= "\n\n--- Ajout le " . now()->format('d/m/Y H:i') . " ---\n" . $validated['explication'];
+            $existingManquant->save();
+            Log::info("Updated existing manquant: ", $existingManquant->toArray());
+            $message = 'Le montant a été ajouté au manquant existant en attente pour cet employé.';
+        } else {
+            // If no entry exists or the existing one is validated, create a new one
+            ManquantTemporaire::create([
+                'employe_id' => $validated['employe_id'],
+                'montant' => $validated['montant'],
+                'explication' => $validated['explication'],
+                'statut' => 'en_attente', // Default status as per schema
+            ]);
+            Log::info("Created new manquant: ", $validated);
+
+            $message = 'Le nouveau manquant a été facturé avec succès et est en attente de validation.';
+        }
+
+        // Redirect with success message
+        return redirect()->back()->with('success', $message);
+
+    } catch (\Exception $e) {
+        Log::info("message: " . $e->getMessage());
+        // Handle any unexpected errors
+        return redirect()->back()
+            ->withInput()
+            ->with('error', 'Une erreur est survenue lors de l\'enregistrement du manquant: ' . $e->getMessage());
     }
+}
 
 
 public function versementsEnAttente()

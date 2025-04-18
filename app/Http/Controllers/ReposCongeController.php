@@ -29,7 +29,8 @@ class ReposCongeController extends Controller
         $nom = auth()->user()->name;
         $role = auth()->user()->role;
         $employes = User::all();
-        $reposConges = ReposConge::with('employe')->get();
+        $reposConges = ReposConge::with('employe')
+        ->get();
 
         return view('repos-conges.index', compact('employes', 'reposConges','nom','role'));
     }
@@ -52,6 +53,10 @@ class ReposCongeController extends Controller
             'raison_c' => 'nullable|in:maladie,evenement,accouchement,autre',
             'autre_raison' => 'nullable|required_if:raison_c,autre|string|max:255',
         ]);
+        //si autre raison est null , alors mettre 'ras' a la place
+        if ($validated['autre_raison'] == null) {
+            $validated['autre_raison'] = 'ras';
+        }
 
         ReposConge::updateOrCreate(
             ['employe_id' => $request->employe_id],

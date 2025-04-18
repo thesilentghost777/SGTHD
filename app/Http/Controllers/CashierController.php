@@ -8,9 +8,12 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Traits\HistorisableActions;
 
 class CashierController extends Controller
 {
+    use HistorisableActions;
+
     public function index()
     {
         $openSession = CashierSession::where('user_id', Auth::id())
@@ -26,35 +29,46 @@ class CashierController extends Controller
 
     public function startSession(Request $request)
     {
-        $validated = $request->validate([
-            'initial_cash' => 'required|numeric|min:0',
-            'initial_change' => 'required|numeric|min:0',
-            'initial_mobile_balance' => 'required|numeric|min:0',
-            'notes' => 'nullable|string'
-        ]);
+        try {
+            $validated = $request->validate([
+                'initial_cash' => 'required|numeric|min:0',
+                'initial_change' => 'required|numeric|min:0',
+                'initial_mobile_balance' => 'required|numeric|min:0',
+                'notes' => 'nullable|string'
+            ]);
 
-        // Check if there's already an open session
-        $openSession = CashierSession::where('user_id', Auth::id())
-            ->whereNull('end_time')
-            ->first();
+            // Check if there's already an open session
+            $openSession = CashierSession::where('user_id', Auth::id())
+                ->whereNull('end_time')
+                ->first();
 
-        if ($openSession) {
-            return redirect()->route('cashier.index')
-                ->with('error', 'Vous avez déjà une session ouverte. Veuillez la fermer avant d\'en ouvrir une nouvelle.');
+            if ($openSession) {
+                return redirect()->route('cashier.index')
+                    ->with('error', 'Vous avez déjà une session ouverte. Veuillez la fermer avant d\'en ouvrir une nouvelle.');
+            }
+
+            $user = Auth::user();
+            $session = new CashierSession();
+            $session->user_id = Auth::id();
+            $session->start_time = now();
+            $session->initial_cash = $validated['initial_cash'];
+            $session->initial_change = $validated['initial_change'];
+            $session->initial_mobile_balance = $validated['initial_mobile_balance'];
+            $session->notes = $validated['notes'];
+            $session->save();
+
+            $this->historiser("session {$session->id} Creer avec succes par {$user->name} 'initial_cash' => {$validated['initial_cash']}'initial_change' =>{$validated['initial_change']} 'initial_mobile_balance' => {$validated['initial_mobile_balance']} 'notes' => {$validated['notes']} ", 'creation_session_caissiere');
+
+            return redirect()->route('cashier.session', $session->id)
+                ->with('success', 'Session de caisse démarrée avec succès.');
+        } catch (\Exception $e) {
+            // En cas d'erreur, retourner à la page précédente avec un message d'erreur
+            return back()->withErrors([
+                'message' => 'Une erreur est survenue: ' . $e->getMessage()
+            ])->withInput();
         }
-
-        $session = new CashierSession();
-        $session->user_id = Auth::id();
-        $session->start_time = now();
-        $session->initial_cash = $validated['initial_cash'];
-        $session->initial_change = $validated['initial_change'];
-        $session->initial_mobile_balance = $validated['initial_mobile_balance'];
-        $session->notes = $validated['notes'];
-        $session->save();
-
-        return redirect()->route('cashier.session', $session->id)
-            ->with('success', 'Session de caisse démarrée avec succès.');
     }
+
 
     public function showSession(CashierSession $session)
 {
@@ -128,6 +142,7 @@ class CashierController extends Controller
             'end_notes' => 'nullable|string'
         ]);
 
+
         DB::beginTransaction();
         try {
             $session->final_cash = $validated['final_cash'];
@@ -151,6 +166,7 @@ class CashierController extends Controller
             $session->discrepancy = $session->final_cash - $expectedBalance;
 
             $session->save();
+            $this->historiser("session {$session->id} Fin de session caissiere", 'fin_session');
 
             DB::commit();
 

@@ -10,9 +10,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Traits\HistorisableActions;
+use App\Models\ProduitStock;
 
 class AvarieController extends Controller
 {
+    use HistorisableActions;
+
+    protected $notificationController;
+
+    public function __construct(NotificationController $notificationController)
+    {
+        $this->notificationController = $notificationController;
+    }
+
     /**
      * Affiche le formulaire pour enregistrer une avarie
      *
@@ -21,7 +32,9 @@ class AvarieController extends Controller
     public function create()
     {
         $produits = Produit_fixes::orderBy('nom')->get();
-        $matieres = Matiere::orderBy('nom')->get();
+        /*$matieres = Matiere::orderBy('nom')->get();*/
+        #retourner toutes les matieres sauf celle commenxant par Taule
+        $matieres = Matiere::where('nom', 'not like', 'Taule%')->orderBy('nom')->get();
         $user = Auth::user();
         $nom = $user->name;
         $secteur = $user->secteur;
@@ -61,51 +74,73 @@ class AvarieController extends Controller
             foreach ($validated['matieres'] as $matiereData) {
                 $matiere = Matiere::findOrFail($matiereData['matiere_id']);
 
+                // Convertir la quantité si nécessaire selon l'unité minimale de la matière
+                $quantiteConvertie = $matiereData['quantite'];
 
-                    // Convertir la quantité si nécessaire selon l'unité minimale de la matière
-                    $quantiteConvertie = $matiereData['quantite'];
-
-                    if ($matiereData['unite'] !== $matiere->unite_minimale->value) {
-                        $tauxConversion = $matiere->unite_minimale::getConversionRate(
-                            $matiereData['unite'],
-                            $matiere->unite_minimale->value
-                        );
-                        $quantiteConvertie = $matiereData['quantite'] * $tauxConversion;
-                    }
+                if ($matiereData['unite'] !== $matiere->unite_minimale) {
+                    $tauxConversion = $matiere->unite_minimale::getConversionRate(
+                        $matiereData['unite'],
+                        $matiere->unite_minimale->toString()
+                    );
+                    $quantiteConvertie = $matiereData['quantite'] * $tauxConversion;
+                }
 
                 if (!$avarieReutilisee) {
-                // Créer l'enregistrement d'utilisation avec quantité négative
-                $utilisation = new Utilisation();
-                $utilisation->id_lot = $idLot;
-                $utilisation->produit = $validated['produit'];
-                $utilisation->matierep = $matiereData['matiere_id'];
-                $utilisation->producteur = Auth::id();
-                $utilisation->quantite_produit = 0;
-                $utilisation->quantite_matiere = $quantiteConvertie;
-                $utilisation->unite_matiere = $matiere->unite_minimale->value;
-                $utilisation->save();
-
-                // Si l'avarie n'est pas réutilisée, on retire la quantité des assignations
-
-                    // Convertir la quantité si nécessaire selon l'unité minimale de la matière
-                    $quantiteConvertie = $matiereData['quantite'];
-
-                    if ($matiereData['unite'] !== $matiere->unite_minimale->value) {
-                        $tauxConversion = $matiere->unite_minimale::getConversionRate(
-                            $matiereData['unite'],
-                            $matiere->unite_minimale->value
-                        );
-                        $quantiteConvertie = $matiereData['quantite'] * $tauxConversion;
-                    }
+                    // Créer l'enregistrement d'utilisation avec quantité négative
+                    $utilisation = new Utilisation();
+                    $utilisation->id_lot = $idLot;
+                    $utilisation->produit = $validated['produit'];
+                    $utilisation->matierep = $matiereData['matiere_id'];
+                    $utilisation->producteur = Auth::id();
+                    $utilisation->quantite_produit = 0;
+                    $utilisation->quantite_matiere = $quantiteConvertie;
+                    $utilisation->unite_matiere = $matiere->unite_minimale;
+                    $utilisation->save();
 
                     // Trouver les assignations de cette matière pour ce producteur et retirer la quantité
-                    $this->deduireQuantiteAssignee(
+                    $deduction = $this->deduireQuantiteAssignee(
                         Auth::id(),
                         $matiereData['matiere_id'],
                         $quantiteConvertie
                     );
+
+                    // Si la déduction échoue, s'arrêter
+                    if (!$deduction || ($deduction instanceof \Illuminate\Http\RedirectResponse)) {
+                        DB::rollBack();
+                        return $deduction ?: redirect()->back()
+                            ->withInput()
+                            ->with('error', 'Erreur lors de la déduction de la quantité assignée pour la matière #'.$matiereData['matiere_id']);
+                    }
+
+                    $this->historiser(
+                        "Avarie enregistrée : {$validated['quantite_produit']} unités du produit #{$validated['produit']} - LOT: $idLot",
+                        'create',
+                        $utilisation->id,
+                        'avarie'
+                    );
                 }
             }
+
+            // Mise à jour du stock d'avaries
+            $stock = ProduitStock::where('id_produit', $validated['produit'])->first();
+            if (!$stock) {
+                $stock = ProduitStock::create([
+                    'id_produit' => $validated['produit'],
+                    'quantite_en_stock' => 0,
+                    'quantite_invendu' => 0,
+                    'quantite_avarie' => 0
+                ]);
+            }
+
+            $stock->quantite_avarie += $validated['quantite_produit'];
+            $stock->save();
+
+            $this->historiser(
+                "Stock d'avaries mis à jour pour le produit #{$validated['produit']} : +{$validated['quantite_produit']} unités",
+                'update',
+                $stock->id,
+                'produit_stock'
+            );
 
             DB::commit();
 
@@ -116,11 +151,18 @@ class AvarieController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            $this->historiser(
+                "Erreur lors de l'enregistrement d'une avarie : {$e->getMessage()}",
+                'error'
+            );
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Erreur lors de l\'enregistrement de l\'avarie: ' . $e->getMessage());
         }
     }
+
+
 
     /**
      * Liste des avaries enregistrées par le producteur connecté
@@ -148,40 +190,43 @@ class AvarieController extends Controller
      * @param float $quantite
      * @return void
      */
-    private function deduireQuantiteAssignee($producteurId, $matiereId, $quantite)
-    {
-        $assignations = AssignationMatiere::where('producteur_id', $producteurId)
-            ->where('matiere_id', $matiereId)
-            ->where('quantite_restante', '>', 0)
-            ->orderBy('created_at', 'asc') // Utiliser d'abord les plus anciennes
-            ->get();
 
-        $quantiteRestanteADeduire = $quantite;
-
-        foreach ($assignations as $assignation) {
-            if ($quantiteRestanteADeduire <= 0) {
-                break;
-            }
-
-            $quantiteDisponible = $assignation->quantite_restante;
-
-            if ($quantiteDisponible >= $quantiteRestanteADeduire) {
-                // Si l'assignation a suffisamment de quantité, on déduit tout
-                $assignation->quantite_restante -= $quantiteRestanteADeduire;
-                $quantiteRestanteADeduire = 0;
-            } else {
-                // Sinon, on prend tout ce qui est disponible
-                $assignation->quantite_restante = 0;
-                $quantiteRestanteADeduire -= $quantiteDisponible;
-            }
-
-            $assignation->save();
-        }
-
-        // Si après avoir parcouru toutes les assignations, il reste de la quantité à déduire,
-        // c'est que le producteur n'a pas assez de matière assignée
-        if ($quantiteRestanteADeduire > 0) {
-            throw new \Exception("Quantité insuffisante de matière assignée pour ce producteur");
-        }
+     protected function deduireQuantiteAssignee($producteurId, $matiereId, $quantite)
+{
+    // Récupérer la matière et son assignation
+    $matiere = Matiere::find($matiereId);
+    if (!$matiere) {
+        return redirect()->back()
+            ->with('error', 'Matière introuvable');
     }
+
+    $assignation = AssignationMatiere::where('producteur_id', $producteurId)
+        ->where('matiere_id', $matiereId)
+        ->first();
+
+    if (!$assignation) {
+        return redirect()->back()
+            ->with('error', 'Matière non assignée : ' . $matiere->nom);
+    }
+
+    // Vérifier si la quantité disponible est suffisante
+    $assignation->quantite_restante -= $quantite;
+    if ($assignation->quantite_restante < 0) {
+        return redirect()->back()
+            ->with('error', 'Quantité assignée insuffisante pour la matière : ' . $matiere->nom);
+    }
+
+    // Enregistrer les modifications
+    $assignation->save();
+
+    // Historiser la modification
+    $this->historiser(
+        "Quantité assignée réduite pour matière #{$matiereId} : -{$quantite} {$matiere->unite_classique}",
+        'update',
+        $assignation->id,
+        'assignation_matiere'
+    );
+
+    return true;
+}
 }

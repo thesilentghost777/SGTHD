@@ -122,10 +122,13 @@ public function store(Request $request)
     $versement->save();
 
     // Compare amount with CP balance
-    $this->comparerEtNotifierDifference($soldeCp, $montant, $versement->id);
-
-    // Log the action
     $user = Auth::user();
+    if($user->role = 'chef_production'){
+        $this->comparerEtNotifierDifference($soldeCp, $montant, $versement->id);
+        #mettre le solde cp a 0
+        $soldeCp->montant = 0;
+    }
+    // Log the action
     $this->historiser("Un versement de {$montant} a été créé par {$user->name}", 'create_versement');
 
     return redirect()->route('versements.index')

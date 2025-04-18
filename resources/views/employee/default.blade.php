@@ -41,7 +41,6 @@
                     <li><a href="{{ route('manquant.mes-deductions') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-alert-circle mr-2"></i>Montant a deduire au salaire</a></li>
                     <li><a href="{{ route('primes.index') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-gift mr-2"></i>Primes</a></li>
                     <li><a href="{{ route('horaire.index') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-clock-check mr-2"></i>Horaires</a></li>
-                    <li><a href="{{ route('extras.index2') }}" class="flex items-center p-2 rounded hover:bg-white/10"><i class="mdi mdi-clock-check mr-2"></i>Reglementations</a></li>
                     <li>
                         <a href="{{ route('repos-conges.employee') }}" class="flex items-center p-2 rounded hover:bg-white/10">
                           <i class="mdi mdi-calendar-check mr-2"></i>Planning et jour de repos

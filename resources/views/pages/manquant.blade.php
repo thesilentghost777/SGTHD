@@ -1,5 +1,4 @@
 @extends('layouts.app')
-
 @section('content')
 <div class="flex items-center justify-center min-h-screen bg-gray-100">
     <!-- Box principale -->
@@ -14,35 +13,64 @@
                 pour minimiser les impacts négatifs.
             </p>
         </div>
-
         <!-- Formulaire -->
         <h2 class="text-2xl font-semibold text-center text-blue-700 mb-4">Attribuer un Manquant</h2>
         <div class="border-t-2 border-blue-500 my-4"></div>
 
         @if(session('success'))
-            <div class="bg-green-100 border border-green-300 text-green-800 rounded p-4 mb-4">
-                {{ session('success') }}
-            </div>
+        <div class="bg-green-100 border border-green-300 text-green-800 rounded p-4 mb-4">
+            {{ session('success') }}
+        </div>
         @endif
 
-        <form action="{{ route('manquant.store') }}" method="POST" x-data>
-            @csrf
+        @if(session('error'))
+        <div class="bg-red-100 border border-red-300 text-red-800 rounded p-4 mb-4">
+            {{ session('error') }}
+        </div>
+        @endif
 
+        @if ($errors->any())
+        <div class="bg-red-100 border border-red-300 text-red-800 rounded p-4 mb-4">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
+
+        <form action="{{ route('manquant.store') }}" method="POST">
+            @csrf
             <!-- Employé -->
             <div class="mb-4">
-                <label for="id_employe" class="block text-gray-700 font-medium mb-2">Employé</label>
-                <select name="id_employe" id="id_employe" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                <label for="employe_id" class="block text-gray-700 font-medium mb-2">Employé</label>
+                <select name="employe_id" id="employe_id" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
                     <option value="">Sélectionnez un employé</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                    <option value="{{ $employee->id }}" {{ old('employe_id') == $employee->id ? 'selected' : '' }}>{{ $employee->name }}</option>
                     @endforeach
                 </select>
+                @error('employe_id')
+                <span class="text-red-500 text-sm">{{ $message }}</span>
+                @enderror
             </div>
 
             <!-- Montant du Manquant -->
             <div class="mb-4">
-                <label for="manquants" class="block text-gray-700 font-medium mb-2">Montant du Manquant</label>
-                <input type="number" name="manquants" id="manquants" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                <label for="montant" class="block text-gray-700 font-medium mb-2">Montant du Manquant</label>
+                <input type="number" name="montant" id="montant" step="0.01" min="1" value="{{ old('montant') }}" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                @error('montant')
+                <span class="text-red-500 text-sm">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <!-- Explication -->
+            <div class="mb-4">
+                <label for="explication" class="block text-gray-700 font-medium mb-2">Explication</label>
+                <textarea name="explication" id="explication" rows="4" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>{{ old('explication') }}</textarea>
+                @error('explication')
+                <span class="text-red-500 text-sm">{{ $message }}</span>
+                @enderror
             </div>
 
             <!-- Bouton de soumission -->
@@ -59,10 +87,4 @@
         </div>
     </div>
 </div>
-
-<!-- Tailwind CSS -->
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.0.0/dist/tailwind.min.css" rel="stylesheet">
-
-<!-- Alpine.js -->
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 @endsection

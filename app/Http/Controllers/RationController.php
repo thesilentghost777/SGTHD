@@ -11,9 +11,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Traits\HistorisableActions;
 
 class RationController extends Controller
 {
+    use HistorisableActions;
+
     // Admin functions
     public function index()
     {
