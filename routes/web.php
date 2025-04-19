@@ -233,3 +233,4 @@ Route::post('serveur/monnaie_recu', [ServeurController::class, 'monnaie_recu'])-
 Route::get('serveur/fiche_versement', [ServeurController::class, 'fiche_versement'])->name('serveur-fiche_versement');
 
 
+});

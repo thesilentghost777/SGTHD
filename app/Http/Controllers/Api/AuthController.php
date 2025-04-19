@@ -9,50 +9,84 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
-
+use App\Notifications\UserRegisteredNotification;
 class AuthController extends Controller
 {
+    public function register(Request $request)
+    {
+        // 1. Valider le JSON
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:6',
+            'password_confirmation' => 'required|same:password',
+            'date_naissance' => 'required|date',
+            'code_secret' => 'required|string',
+            'departement' => 'required|string',
+            'role' => 'required|string',
+            'num_tel' => 'required|string',
+            'annee_debut_service' => 'required|integer'
+        ]);
+
+        // 2. Créer l'utilisateur
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'date_naissance' => $data['date_naissance'],
+            'code_secret' => $data['code_secret'],
+            'secteur' => $data['departement'],
+            'role' => $data['role'],
+            'num_tel' => $data['num_tel'],
+            'annee_debut_service' => $data['annee_debut_service']
+        ]);
+
+        // 3. Envoyer l'email (en queue pour éviter les timeout)
+        $user->notify(new UserRegisteredNotification());
+
+        // 4. Réponse JSON
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Inscription réussie. Vérifiez votre email.',
+            'user' => $user,
+            'token' => $user->createToken('auth-token')->plainTextToken
+        ], 201);
+    }
+
+    // Connexion
     public function login(Request $request)
     {
-        $request->validate([
+        
+        
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
         ]);
-
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            throw ValidationException::withMessages([
-                'email' => ['Les identifiants fournis sont incorrects.'],
-            ]);
+    
+        if ($validator->fails()) {
+            \Log::error('Validation failed', $validator->errors()->toArray());
+            return response()->json([
+                'status' => 'erreur',
+                'errors' => $validator->errors()
+            ], 422);
         }
-
-        return response()->json(Auth::user());
-    }
-
-    public function register(Request $request)
-    {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'date_naissance' => ['nullable', 'date'],
-            'code_secret' => ['nullable', 'integer'],
-            'secteur' => ['nullable', 'string', 'max:50'],
-            'num_tel' => ['nullable', 'string', 'max:15'],
+    
+        if (!Auth::attempt($request->only('email', 'password'))) {
+            \Log::error('Auth attempt failed', ['email' => $request->email]);
+            return response()->json([
+                'status' => 'erreur',
+                'message' => 'Identifiants invalides'
+            ], 401);
+        }
+    
+        $user = Auth::user();
+        $token = $user->createToken('mobile-token')->plainTextToken;
+    
+        return response()->json([
+            'status' => 'success',
+            'token' => $token,
+            'user' => $user
         ]);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'date_naissance' => $request->date_naissance,
-            'code_secret' => $request->code_secret,
-            'secteur' => $request->secteur,
-            'num_tel' => $request->num_tel,
-        ]);
-
-        Auth::login($user);
-
-        return response()->json($user, 201);
     }
 
     public function logout(Request $request)

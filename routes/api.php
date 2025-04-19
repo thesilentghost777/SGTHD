@@ -3,6 +3,9 @@
 use App\Http\Controllers\Api\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\EmployeeApiController;
+use App\Http\Controllers\Api\ServeurApiController;
+use App\Http\Controllers\Api\VenteApiController;
+
 
 
 // Supprimer le middleware 'guest' (incompatible avec Sanctum)
@@ -51,3 +54,38 @@ Route::post('/api/register', [AuthController::class, 'register']);
     // Annonces
     Route::get('/api/annonces', [EmployeeApiController::class, 'getAnnouncements']);
     Route::post('/api/annonces/reaction', [EmployeeApiController::class, 'reactToAnnouncement']);
+
+    Route::post('/login_page', [AuthController::class, 'login']);
+
+// Route publique pour register
+Route::post('/register', [AuthController::class, 'register']);
+
+// Route protégée, exemple : Dashboard
+Route::middleware('auth:sanctum')->get('/dashboard', function () {
+    return response()->json([
+        'message' => 'Bienvenue dans le dashboard',
+        'user' => auth()->user()
+    ]);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('serveur')->group(function () {
+        Route::get('/dashboard', [ServeurApiController::class, 'dashboard']);
+        Route::get('/stats', [ServeurApiController::class, 'stats']);
+        Route::get('/versements', [ServeurApiController::class, 'versements']);
+        Route::post('/store-produit', [ServeurApiController::class, 'store']);
+        Route::post('/store-vendu', [ServeurApiController::class, 'storeVendu']);
+        Route::post('/store-invendu', [ServeurApiController::class, 'storeInvendu']);
+        Route::post('/declare-avarie', [ServeurApiController::class, 'declareAvarie']);
+        Route::post('/recuperer-invendus', [ServeurApiController::class, 'recupererInvendus']);
+        Route::get('/produits-recus', [ServeurApiController::class, 'getProduitsRecus']);
+        Route::post('/produits-recus', [ServeurApiController::class, 'storeProduitRecu']);
+
+    });
+    
+    Route::prefix('vente')->group(function () {
+        Route::get('/index', [VenteApiController::class, 'index']);
+        Route::get('/compare-vendeurs', [VenteApiController::class, 'compareVendeurs']);
+        Route::get('/produits', [VenteApiController::class, 'getProduits']);
+    });
+});
